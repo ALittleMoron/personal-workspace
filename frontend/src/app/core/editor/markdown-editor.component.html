@@ -1,0 +1,37 @@
+<section class="markdown-editor surface-card" [attr.aria-label]="ariaLabel()">
+  <div class="markdown-editor-toolbar d-flex flex-wrap gap-2 p-2 border-bottom">
+    <div class="btn-group btn-group-sm" role="group">
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        [class.active]="mode() === 'edit'"
+        [attr.aria-pressed]="mode() === 'edit'"
+        (click)="showEditor()"
+      >
+        {{ editLabel() }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        [class.active]="mode() === 'preview'"
+        [attr.aria-pressed]="mode() === 'preview'"
+        (click)="showPreview()"
+      >
+        {{ previewLabel() }}
+      </button>
+    </div>
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-secondary"
+      [disabled]="disabled() || mode() === 'preview'"
+      (click)="toggleBold()"
+    >
+      {{ boldLabel() }}
+    </button>
+  </div>
+
+  <div #editorHost class="markdown-editor-host" [hidden]="mode() !== 'edit'"></div>
+  @if (mode() === 'preview') {
+    <div class="markdown-content markdown-editor-preview p-3" [innerHTML]="previewHtml()"></div>
+  }
+</section>

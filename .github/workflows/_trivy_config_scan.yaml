@@ -1,0 +1,13 @@
+name: Trivy config scan
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  trivy-config-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - run: make security-trivy-config

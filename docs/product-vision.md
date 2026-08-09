@@ -7,10 +7,6 @@ knowledge records, people, memorable dates, files, calendar projections, and str
 Its source code is open for anyone to inspect, deploy, modify, and redistribute under AGPL-3.0;
 each installation remains controlled by one operator.
 
-The project is extracted from private owner-only features that do not belong in the public product
-story of `my-site`. It receives a fresh history and a product boundary of its own instead of
-remaining an administrative annex of a public portfolio and article site.
-
 ## Audience
 
 - A person who wants to run a private workspace on infrastructure they control.
@@ -56,17 +52,15 @@ remaining an administrative annex of a public portfolio and article site.
 - Angular SSR or hydration transfer for product pages.
 - Agent REST APIs, remote MCP, certificate PKI, generic automation, or AI features without a new
   bounded design.
-- Migration of existing production records or private objects from `my-site`; the first
-  installation starts empty.
+- Automatic import of existing production records or private objects; a new installation starts
+  empty.
 
 ## Success Criteria
 
 - A new operator can deploy the documented stack, configure credentials through secrets, log in,
   and use every initial feature without creating an account.
-- A clean installation starts from one target-owned initial database schema and empty private
+- A clean installation starts from one initial application database schema and empty private
   bucket.
 - Restart, backup, restore, logout, session expiry, and credential rotation have verified behavior.
 - Private records and files never appear in public routes, SSR output, search discovery, transfer
   cache, public object storage, or unauthenticated API responses.
-- `my-site` removes the extracted features only after the new product passes its documented parity
-  gate.

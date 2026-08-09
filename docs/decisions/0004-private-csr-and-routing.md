@@ -5,7 +5,8 @@
 
 ## Context
 
-The extracted application is an authenticated private workspace. Search indexing, public content rendering, and server-side rendering are not product requirements.
+The application is an authenticated private workspace. Search indexing, public content rendering,
+and server-side rendering are not product requirements.
 
 ## Decision
 
@@ -27,7 +28,8 @@ The API route contract is:
 
 ## Consequences
 
-- Angular SSR and public SEO machinery are excluded from the target frontend.
-- Imported admin components must be adapted to ordinary workspace routes and language.
+- Angular SSR and public SEO machinery are excluded from the Personal Workspace frontend.
+- Workspace components use ordinary product routes and language rather than an administrative
+  contour.
 - Nginx serves static CSR assets with history fallback and proxies only the documented API contours.
 - Authorization remains enforced by the backend even though the entire workspace UI is protected.

@@ -2,9 +2,9 @@
 
 ## Status
 
-This document defines the target contracts for future work packages. It does not claim that an
-implementation exists. Historical source documents under `source-baseline/` are subordinate to
-this target.
+This document defines the current system boundary and the contracts for planned product work. The
+reusable backend, Angular CSR, and infrastructure/delivery foundations are present; authentication
+and product domains remain future work.
 
 ## System Boundary
 
@@ -13,8 +13,8 @@ through public HTTPS, but all product routes and data require authentication. Po
 MinIO, TaskIQ, backup services, and internal web panels remain on private networks. WireGuard gates
 the internal panels.
 
-The repository remains a monorepo containing independently testable `backend`, `frontend`, and
-`infra` contours when code arrives.
+The repository is a monorepo containing independently testable `backend`, `frontend`, and `infra`
+contours.
 
 ## Authentication Contract
 
@@ -30,16 +30,15 @@ The repository remains a monorepo containing independently testable `backend`, `
 - Refresh validates the session and issues a short-lived PASETO access token. Angular keeps the
   access token in memory and sends it through the `Authorization` header. Tokens and session IDs
   never enter localStorage or sessionStorage.
-- Refresh and logout preserve the existing narrow CSRF boundary with a required CSRF header, Fetch
+- Refresh and logout will use a narrow CSRF boundary with a required CSRF header, Fetch
   Metadata validation, same-origin checks, restrictive cookie policy, and server-side tests.
 - Logout deletes the Valkey session and expires the cookie. Credential or session-key rotation
   invalidates all existing sessions.
 - Protected responses use `Cache-Control: no-store`. Authentication events are privacy-safe and do
   not log credentials, raw tokens, raw session IDs, or private content.
 
-The detailed setting names, timeout values, and key-rotation interface belong to the dedicated
-authentication design; this foundation deliberately does not invent them before backend settings
-exist.
+The detailed authentication setting names, timeout values, and key-rotation interface belong to
+the dedicated authentication design and are not defined by the current foundation.
 
 ## HTTP and UI Routes
 
@@ -71,11 +70,11 @@ internal-operational before implementation.
 
 ## Backend
 
-- Python, Litestar, Dishka, PostgreSQL, async SQLAlchemy, and Alembic retain the source project's
-  clean layer boundaries.
-- A clean initial migration contains only target-owned platform, Knowledge, Calendar-supporting,
-  and Resume tables. It does not replay `my-site` migration history.
-- Domain and persistence contracts remove `author_username`, account foreign keys, role checks,
+- Python, Litestar, Dishka, PostgreSQL, async SQLAlchemy, and Alembic follow explicit layer
+  boundaries.
+- The initial database migration establishes an empty application schema. Product tables are added
+  through later migrations as their domains are implemented.
+- Domain and persistence contracts omit `author_username`, account foreign keys, role checks,
   and ownership predicates. There is only one data namespace per installation.
 - Knowledge uses a common typed item/taxonomy/file foundation plus explicit one-to-one extensions
   and workflows for each item kind.
@@ -87,7 +86,7 @@ internal-operational before implementation.
 
 - Angular runs as a client-rendered application. SSR, hydration, transfer cache, sitemap, robots,
   canonical metadata, public view tracking, and public SEO route machinery are excluded.
-- The frontend retains typed feature services, route-level lazy loading, backend-driven UI i18n,
+- The frontend uses typed feature services, route-level lazy loading, backend-driven UI i18n,
   centralized error handling, notifications, unsaved-change protection, accessible controls, and
   the centralized sanitized Markdown renderer/editor.
 - Private photos and attachments are read through authenticated blob responses. Browser object URLs
@@ -106,15 +105,37 @@ internal-operational before implementation.
 
 ## Infrastructure
 
-Retained platform capabilities:
+Platform capabilities:
 
 - PostgreSQL, Valkey, MinIO, TaskIQ worker and scheduler, Databasus, Sentry, and structured logging.
 - Separate backend and frontend images behind nginx TLS termination.
-- Private application networks, non-root containers, no Docker socket, and no unnecessary public
-  service ports.
+- Private application networks, non-root application-owned containers, no Docker socket, and no
+  unnecessary public service ports. The pinned Databasus root-entrypoint exception is bounded and
+  documented in the threat model.
 - WireGuard-bound MinIO and backup administration panels.
 - Reproducible certificate management, blue/green application replacement, health gates, CI,
   dependency/security scanning, performance checks, and backup/restore procedures.
+
+The implemented edge proxies `/api/*` to the active backend slot and all browser paths to the
+active static CSR frontend slot. The frontend origin generates the per-response nonce, substitutes
+it into HTML, and returns the matching CSP plus `Cache-Control: no-store`; the edge preserves that
+response contract rather than generating a second policy. MinIO has no public API or object route.
+Deployment preflights the target nginx configuration, arms rollback before the traffic switch,
+records active-slot state atomically only after restart-policy and edge-health gates, and restores
+and smoke-checks the previous slot on failure. A durable, fsynced transition marker records the
+previous and target slots before target startup; the next run completes or rolls back an
+interrupted deployment before starting another one. Target and rollback state writes fsync the
+file and parent directory; successful rollback restores previous state, while first-deploy and
+fail-closed paths remove stale state and fsync the directory. An unavailable rollback removes the
+nginx container and verifies its absence fail-closed.
+The workflow does not cancel an in-progress deployment, and every remote payload, TLS, or stack
+start mutation holds the same durable host flock under `.deploy-state`.
+Production environment files are atomically created mode `0600`, owned by the runtime user, parsed
+as quoted data without shell evaluation, and excluded from root Docker build contexts. Blank
+required credentials, unchanged example placeholders, and enabled Sentry without a nonempty DSN
+are rejected before Compose secret materialization. Panel binds
+must be private addresses assigned to the declared administratively active WireGuard link, verified
+through unprivileged `ip` inspection without sudo or added capabilities.
 
 Explicitly excluded capabilities:
 
@@ -123,8 +144,8 @@ Explicitly excluded capabilities:
 - Public media delivery unless a later typed feature demonstrates a need separate from private
   Knowledge objects.
 
-## Data and Cutover
+## Data Bootstrap
 
-The target starts empty. No direct database dump, row copy, object-bucket copy, or identifier
-compatibility contract is required. Removal from `my-site` still requires a fresh backup and an
-explicit destructive-action confirmation before tables or private objects are deleted.
+A new installation starts empty. No direct database dump, row copy, object-bucket copy, or
+identifier compatibility contract is part of the application foundation. A future import requires
+its own schema mapping, validation, backup, and rollback procedure.

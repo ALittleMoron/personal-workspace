@@ -1,0 +1,157 @@
+name: Reusable deploy to production
+on:
+  workflow_call:
+    inputs:
+      issue_certificates:
+        required: true
+        type: boolean
+    secrets:
+      DB_PASSWORD:
+        required: true
+      MINIO_ACCESS_KEY:
+        required: true
+      MINIO_SECRET_KEY:
+        required: true
+      SENTRY_DSN:
+        required: false
+      SSH_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Render runtime environment
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          GITHUB_ENV_VARS_JSON: ${{ toJson(vars) }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: >
+          python3 infra/scripts/render_deploy_env.py
+          --manifest infra/deploy/runtime-env.manifest.json
+          --output .env
+      - name: Verify private runtime environment
+        run: |
+          test "$(stat -c '%a' .env)" = "600"
+          test "$(stat -c '%u' .env)" = "$(id -u)"
+      - name: Prepare deploy payload
+        run: |
+          mkdir -p .deploy-payload
+          cp -a Makefile docker-compose.yml .dockerignore backend/ frontend/ infra/ .env .deploy-payload/
+          test -f .deploy-payload/.dockerignore
+          test "$(stat -c '%a' .deploy-payload/.env)" = "600"
+      - name: Validate remote deploy path
+        env:
+          REMOTE_PATH: ${{ vars.REMOTE_PATH }}
+        run: |
+          case "$REMOTE_PATH" in
+            /|*/|*//*|*/./*|*/../*|*/.|*/..|*[!A-Za-z0-9_./-]*)
+              echo "REMOTE_PATH must be an absolute, normalized path without whitespace or shell metacharacters." >&2
+              exit 1
+              ;;
+            /*) ;;
+            *)
+              echo "REMOTE_PATH must be absolute." >&2
+              exit 1
+              ;;
+          esac
+      - name: Provision remote rsync lock wrapper
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          REMOTE_PATH: ${{ vars.REMOTE_PATH }}
+        with:
+          host: ${{ vars.REMOTE_HOST }}
+          username: ${{ vars.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: REMOTE_PATH
+          script: |
+            set -eu
+            case "$REMOTE_PATH" in
+              /|*/|*//*|*/./*|*/../*|*/.|*/..|*[!A-Za-z0-9_./-]*) exit 1 ;;
+              /*) ;;
+              *) exit 1 ;;
+            esac
+            deploy_state_dir="$REMOTE_PATH/.deploy-state"
+            wrapper_path="$deploy_state_dir/rsync-with-deploy-lock"
+            mkdir -p "$deploy_state_dir"
+            chmod 700 "$deploy_state_dir"
+            temporary_path=""
+            cleanup_wrapper() {
+              if [ -n "$temporary_path" ]; then
+                rm -f -- "$temporary_path"
+              fi
+            }
+            trap cleanup_wrapper 0 1 2 15
+            temporary_path="$(mktemp "$deploy_state_dir/.rsync-with-deploy-lock.XXXXXX")"
+            printf '%s\n' \
+              '#!/usr/bin/env bash' \
+              'set -euo pipefail' \
+              'wrapper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"' \
+              'exec 9>"$wrapper_dir/deploy.lock"' \
+              'flock 9' \
+              'exec rsync "$@"' \
+              >"$temporary_path"
+            chmod 700 "$temporary_path"
+            mv -f -- "$temporary_path" "$wrapper_path"
+            temporary_path=""
+            trap - 0 1 2 15
+      - name: Sync runtime files
+        uses: burnett01/rsync-deployments@4d419d1dc46d4a8a2b6ceab2f951f0f93b2da8f5 # 9.0.0
+        with:
+          switches: >-
+            -avzr --delete
+            --rsync-path=${{vars.REMOTE_PATH}}/.deploy-state/rsync-with-deploy-lock
+            --exclude=.git
+            --exclude=.deploy-state
+            --exclude=node_modules
+            --exclude=.venv
+          path: .deploy-payload/
+          remote_path: ${{ vars.REMOTE_PATH }}
+          remote_host: ${{ vars.REMOTE_HOST }}
+          remote_user: ${{ vars.REMOTE_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Verify remote runtime environment
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ vars.REMOTE_HOST }}
+          username: ${{ vars.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ vars.REMOTE_PATH }}
+            test "$(stat -c '%a' .env)" = "600"
+            test "$(stat -c '%u' .env)" = "$(id -u)"
+            test -f .dockerignore
+      - name: Issue certificates
+        if: ${{ inputs.issue_certificates }}
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ vars.REMOTE_HOST }}
+          username: ${{ vars.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ vars.REMOTE_PATH }}
+            mkdir -p .deploy-state
+            exec flock .deploy-state/deploy.lock make certbot-issue
+      - name: Start healthy slot
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ vars.REMOTE_HOST }}
+          username: ${{ vars.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ vars.REMOTE_PATH }}
+            mkdir -p .deploy-state
+            exec flock .deploy-state/deploy.lock make run

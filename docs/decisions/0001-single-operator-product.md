@@ -5,7 +5,8 @@
 
 ## Context
 
-`personal-workspace` extracts private Knowledge, Calendar, and Resume workflows from a public site. The extracted product is operated by one person and does not need the identity and authorization model of `my-site`.
+Personal Workspace is a private self-hosted application operated by one person. Hosted multi-user
+identity, collaboration, and authorization models are outside its product boundary.
 
 ## Decision
 
@@ -17,5 +18,5 @@ Authentication proves that the current client is the operator. Domain records do
 
 - Private routes can use one operator authorization policy.
 - Queries, indexes, DTOs, and UI controls do not preserve inherited author or role concepts.
-- `my-site` multi-user contracts are source evidence, not defaults for the new product.
+- Multi-user contracts are not implicit extension points for the product.
 - Collaboration and public sharing are non-goals until explicitly redesigned.

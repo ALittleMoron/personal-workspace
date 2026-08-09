@@ -1,0 +1,60 @@
+.surface-card {
+  color: var(--text-primary);
+  background-color: var(--surface-1);
+  border: 1px solid var(--border-color-solid);
+  border-radius: 0.75rem;
+}
+
+.markdown-content {
+  overflow-wrap: anywhere;
+}
+
+.markdown-content :where(img, table) {
+  max-width: 100%;
+}
+
+.markdown-content :where(pre, table) {
+  overflow-x: auto;
+}
+
+.markdown-code {
+  margin: 1rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+  background-color: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.markdown-code code {
+  color: var(--text-primary);
+  white-space: pre;
+}
+
+.markdown-code .token.comment,
+.markdown-code .token.prolog,
+.markdown-code .token.doctype,
+.markdown-code .token.cdata {
+  color: var(--syntax-comment-color);
+  font-style: italic;
+}
+
+.markdown-code .token.punctuation {
+  color: var(--syntax-punctuation-color);
+}
+
+.markdown-code :where(.token.property, .token.tag, .token.boolean, .token.number, .token.constant) {
+  color: var(--syntax-literal-color);
+}
+
+.markdown-code :where(.token.string, .token.char, .token.builtin) {
+  color: var(--syntax-string-color);
+}
+
+.markdown-code :where(.token.atrule, .token.attr-value, .token.keyword) {
+  color: var(--syntax-keyword-color);
+}
+
+.markdown-code :where(.token.function, .token.class-name) {
+  color: var(--syntax-function-color);
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+action="${1:?action is required}"
+
+load_secret_file() {
+    local variable_name="$1"
+    local file_variable_name="${variable_name}_FILE"
+    local file_path="${!file_variable_name:-}"
+
+    if [ -z "$file_path" ]; then
+        return
+    fi
+    if [ ! -r "$file_path" ]; then
+        echo "${file_variable_name} points to an unreadable file: ${file_path}" >&2
+        exit 1
+    fi
+
+    export "$variable_name=$(<"$file_path")"
+    unset "$file_variable_name"
+}
+
+for secret_variable_name in DB_PASSWORD MINIO_ACCESS_KEY MINIO_SECRET_KEY SENTRY_DSN; do
+    load_secret_file "$secret_variable_name"
+done
+
+case "$action" in
+    init)
+        alembic -c src/infra/postgresql/alembic/alembic.ini upgrade head
+        ;;
+    run)
+        granian --interface asgi --factory --host 0.0.0.0 --port 8080 main:create_app
+        ;;
+    taskiq-worker)
+        taskiq worker entrypoints.taskiq.worker:broker
+        ;;
+    taskiq-scheduler)
+        taskiq scheduler entrypoints.taskiq.worker:scheduler
+        ;;
+    *)
+        echo "Unknown application action: ${action}" >&2
+        exit 2
+        ;;
+esac

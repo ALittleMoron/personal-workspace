@@ -1,0 +1,25 @@
+.markdown-editor {
+  overflow: hidden;
+}
+
+.markdown-editor-host,
+.markdown-editor-preview {
+  min-block-size: 16rem;
+}
+
+.markdown-editor-host .cm-editor {
+  min-block-size: 16rem;
+  color: var(--text-primary);
+  background: var(--surface-1);
+}
+
+.markdown-editor-host .cm-scroller {
+  min-block-size: 16rem;
+  font-family: var(--bs-font-monospace);
+}
+
+.markdown-editor-host .cm-gutters {
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-color: var(--border-color-solid);
+}

@@ -1,0 +1,66 @@
+name: Quality and security
+on:
+  push:
+    paths-ignore:
+      - "docs/**"
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-style:
+    uses: ./.github/workflows/_backend_style.yaml
+  backend-lint:
+    uses: ./.github/workflows/_backend_lint.yaml
+  backend-types:
+    uses: ./.github/workflows/_backend_types.yaml
+  backend-bandit:
+    uses: ./.github/workflows/_backend_bandit.yaml
+  backend-pip-audit:
+    uses: ./.github/workflows/_backend_pip_audit.yaml
+  backend-vulture:
+    uses: ./.github/workflows/_backend_vulture.yaml
+  frontend-style:
+    uses: ./.github/workflows/_frontend_style.yaml
+  frontend-lint:
+    uses: ./.github/workflows/_frontend_lint.yaml
+  frontend-typecheck:
+    uses: ./.github/workflows/_frontend_typecheck.yaml
+  frontend-security:
+    uses: ./.github/workflows/_frontend_security.yaml
+
+  backend-tests:
+    needs: [backend-style, backend-lint, backend-types, backend-bandit, backend-pip-audit, backend-vulture]
+    uses: ./.github/workflows/_backend_tests.yaml
+  frontend-tests:
+    needs: [frontend-style, frontend-lint, frontend-typecheck, frontend-security]
+    uses: ./.github/workflows/_frontend_tests.yaml
+  frontend-build:
+    needs: [frontend-style, frontend-lint, frontend-typecheck]
+    uses: ./.github/workflows/_frontend_build.yaml
+  frontend-lighthouse:
+    needs: [frontend-tests, frontend-build]
+    uses: ./.github/workflows/_frontend_lighthouse.yaml
+
+  dockerfile-lint:
+    needs: [backend-tests, frontend-tests, frontend-build]
+    uses: ./.github/workflows/_dockerfile_lint.yaml
+  trivy-config-scan:
+    needs: [backend-tests, frontend-tests, frontend-build]
+    uses: ./.github/workflows/_trivy_config_scan.yaml
+  infra-security:
+    needs: [backend-tests, frontend-tests, frontend-build]
+    uses: ./.github/workflows/_infra_security.yaml
+  backend-docker-image-security:
+    needs: [backend-tests]
+    uses: ./.github/workflows/_backend_docker_image_security.yaml
+  frontend-docker-image-security:
+    needs: [frontend-tests, frontend-build]
+    uses: ./.github/workflows/_frontend_docker_image_security.yaml
+  nginx-docker-image-security:
+    needs: [dockerfile-lint, infra-security]
+    uses: ./.github/workflows/_nginx_docker_image_security.yaml

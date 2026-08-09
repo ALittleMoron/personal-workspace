@@ -18,4 +18,4 @@ Resume document locale is independent of UI locale and is initially restricted t
 - Core Knowledge read and write models do not contain parallel language fields.
 - A future additional UI locale does not imply content migration.
 - A future additional Resume document locale requires its own typed-template design.
-- Imported localization code must be evaluated against this boundary rather than copied wholesale.
+- Localization changes must be evaluated against this boundary.
