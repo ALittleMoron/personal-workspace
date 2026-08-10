@@ -6,8 +6,8 @@ authors = [{ name = "Dmitriy Lunev", email = "d.lunev.dev@gmail.com" }]
 requires-python = "==3.14.*,<4.0"
 license = "AGPL-3.0-only"
 dependencies = [
-    "aiobotocore>=3.8.0",
-    "alembic>=1.18.5",
+    "aiobotocore>=3.9.0",
+    "alembic>=1.19.0",
     "dishka>=1.10.1",
     "ecs-logging>=2.3.0",
     "granian[reload]>=2.7.9",
@@ -19,14 +19,14 @@ dependencies = [
     "structlog>=26.1.0",
     "taskiq>=0.12.4",
     "taskiq-redis>=1.2.3",
-    "types-aiobotocore-s3>=3.8.0",
+    "types-aiobotocore-s3>=3.9.0",
     "verbose-http-exceptions[litestar]>=3.0.0",
 ]
 
 [dependency-groups]
 dev = [
     "bandit>=1.9.4",
-    "coverage>=7.15.2",
+    "coverage>=7.15.4",
     "httpx>=0.28.1",
     "mypy>=2.3.0",
     "pip-audit>=2.10.1",
@@ -37,7 +37,7 @@ dev = [
     "ruff>=0.16.1",
     "vulture>=2.16",
 ]
-local = ["ipython>=9.15.0", "pre-commit>=4.6.1"]
+local = ["ipython>=9.16.1", "pre-commit>=4.6.1"]
 
 [tool.uv]
 package = false
