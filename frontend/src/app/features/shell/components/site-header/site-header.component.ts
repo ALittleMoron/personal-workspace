@@ -1,0 +1,95 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
+import { ThemeService } from '../../../../core/layout/theme.service';
+import { I18nService } from '../../../../core/i18n/i18n.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { LanguageCode } from '../../../../core/i18n/i18n.model';
+import { localizedPublicHomePath } from '../../../../core/routing/public-home';
+
+interface LanguageOption {
+  code: LanguageCode;
+  label: string;
+  shortLabel: string;
+  selected: boolean;
+}
+
+@Component({
+  selector: 'app-site-header',
+  standalone: true,
+  imports: [RouterLink, TranslatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './site-header.component.html',
+})
+export class SiteHeaderComponent {
+  private readonly themeService = inject(ThemeService);
+  private readonly i18n = inject(I18nService);
+  private readonly router = inject(Router);
+
+  readonly isNavOpen = signal(false);
+  readonly homeLink = computed(() => localizedPublicHomePath(this.currentLanguage()));
+  readonly toggleLabel = computed(() =>
+    this.i18n.translate(
+      this.themeService.theme() === 'light' ? 'shell.theme.dark' : 'shell.theme.light',
+    ),
+  );
+  readonly languageOptions = computed<LanguageOption[]>(() => {
+    const currentLanguage = this.i18n.language();
+    return this.i18n.languages().map((language) => ({
+      code: language.code,
+      label: language.label,
+      shortLabel: language.code.toUpperCase(),
+      selected: language.code === currentLanguage,
+    }));
+  });
+
+  toggleNav(): void {
+    this.isNavOpen.update((v) => !v);
+  }
+
+  closeNav(): void {
+    this.isNavOpen.set(false);
+  }
+
+  toggle(): void {
+    this.themeService.toggleTheme();
+  }
+
+  switchLanguage(language: LanguageCode): void {
+    const nextUrl = rewriteLanguagePrefixedUrl(this.router.url, language);
+    this.i18n.switchLanguage(language).subscribe({
+      next: () => this.router.navigateByUrl(nextUrl),
+    });
+  }
+
+  private currentLanguage(): LanguageCode {
+    const language = this.i18n.language();
+    if (language === null) {
+      throw new Error('I18n language is not initialized');
+    }
+    return language;
+  }
+}
+
+export function rewriteLanguagePrefixedUrl(currentUrl: string, language: LanguageCode): string {
+  const url = new URL(currentUrl, 'http://localhost');
+  const segments = url.pathname.split('/').filter((segment) => segment.length > 0);
+
+  if (segments[0] === 'ru' || segments[0] === 'en') {
+    segments[0] = language;
+  } else if (isPublicRouteSegment(segments[0])) {
+    segments.unshift(language);
+  } else {
+    return currentUrl;
+  }
+
+  return `/${segments.join('/')}${url.search}${url.hash}`;
+}
+
+function isPublicRouteSegment(segment: string | undefined): boolean {
+  return (
+    segment === undefined ||
+    segment === 'how-this-site-is-built' ||
+    segment === 'updates' ||
+    segment === 'sitemap'
+  );
+}

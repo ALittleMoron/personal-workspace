@@ -1,0 +1,114 @@
+name: "test, lint and security"
+
+on:
+  push:
+    paths-ignore:
+      - ".github/README.md"
+      - ".github/README_RU.md"
+      - ".github/badges/**"
+      - "docs/**"
+  workflow_dispatch:
+
+jobs:
+  backend-style:
+    name: "Backend style"
+    uses: ./.github/workflows/_backend_style.yaml
+
+  backend-lint:
+    name: "Backend lint"
+    uses: ./.github/workflows/_backend_lint.yaml
+
+  backend-types:
+    name: "Backend types"
+    uses: ./.github/workflows/_backend_types.yaml
+
+  backend-bandit:
+    name: "Backend Bandit"
+    uses: ./.github/workflows/_backend_bandit.yaml
+
+  backend-pip-audit:
+    name: "Backend pip-audit"
+    uses: ./.github/workflows/_backend_pip_audit.yaml
+
+  backend-vulture:
+    name: "Backend Vulture"
+    uses: ./.github/workflows/_backend_vulture.yaml
+
+  frontend-style:
+    name: "Frontend style"
+    uses: ./.github/workflows/_frontend_style.yaml
+
+  frontend-lint:
+    name: "Frontend lint"
+    uses: ./.github/workflows/_frontend_lint.yaml
+
+  frontend-typecheck:
+    name: "Frontend typecheck"
+    uses: ./.github/workflows/_frontend_typecheck.yaml
+
+  frontend-security:
+    name: "Frontend security"
+    uses: ./.github/workflows/_frontend_security.yaml
+
+  backend-tests:
+    name: "Backend tests"
+    needs:
+      - backend-style
+      - backend-lint
+      - backend-types
+      - backend-bandit
+      - backend-pip-audit
+      - backend-vulture
+    uses: ./.github/workflows/_backend_tests.yaml
+
+  frontend-tests:
+    name: "Frontend tests"
+    needs:
+      - frontend-style
+      - frontend-lint
+      - frontend-typecheck
+      - frontend-security
+    uses: ./.github/workflows/_frontend_tests.yaml
+
+
+  dockerfile-lint:
+    name: "Dockerfile lint"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs:
+      - backend-tests
+    uses: ./.github/workflows/_dockerfile_lint.yaml
+
+  trivy-config-scan:
+    name: "Trivy config scan"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs:
+      - backend-tests
+    uses: ./.github/workflows/_trivy_config_scan.yaml
+
+  backend-docker-image-security:
+    name: "Backend Docker image security"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs:
+      - backend-tests
+    uses: ./.github/workflows/_backend_docker_image_security.yaml
+
+  frontend-docker-image-security:
+    name: "Frontend Docker image security"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs:
+      - backend-tests
+    uses: ./.github/workflows/_frontend_docker_image_security.yaml
+
+  nginx-docker-image-security:
+    name: "Nginx Docker image security"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs:
+      - backend-tests
+    uses: ./.github/workflows/_nginx_docker_image_security.yaml
+
+  infra-security:
+    name: "Infrastructure security"
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs:
+      - backend-tests
+    uses: ./.github/workflows/_infra_security.yaml

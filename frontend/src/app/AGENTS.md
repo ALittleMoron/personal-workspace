@@ -1,0 +1,99 @@
+# Frontend Architecture Instructions
+
+These rules apply to every file under `frontend/src/app/`, including TypeScript, templates, styles,
+tests, and app-specific supporting files.
+
+## Layer Structure
+
+```text
+frontend/src/app/
+├── core/          # App-wide infrastructure only
+├── shared/        # Reusable UI primitives and framework-independent utilities
+├── features/      # Feature modules — all domain code lives here
+└── testing/       # Shared test-only helpers
+```
+
+## Strict Import Rules
+
+Never violate these boundaries:
+
+- `core/` must not import from `features/` or `shared/`.
+- `features/<a>/` must not import from `features/<b>/`.
+- `shared/` must not import from `features/` or application data/state services. Shared code may use
+  Angular infrastructure and narrowly scoped cross-cutting i18n or rendering contracts when the
+  component remains domain-independent.
+- `testing/` is test-only and must not be imported by production code.
+- Feature services must not inject `HttpClient` directly; use `ApiClient` from `core/http/`.
+- When one feature needs data that is also used by another feature, do not import that other
+  feature's service or model just for convenience. Add a small feature-owned service/model over the
+  shared backend endpoint, or move a genuinely reusable primitive to an allowed shared layer.
+
+## `shared/ui/` Rules
+
+- Add a component here only when 2+ features already use it.
+- Keep shared components standalone and `OnPush`, with explicit inputs/outputs and UI-local logic.
+  They may inject Angular infrastructure or a domain-independent cross-cutting i18n/rendering
+  service, but never a feature service, domain workflow, or application data/state service.
+- Use `LocalizedDatePickerComponent` for calendar-date fields because native date-picker popovers
+  cannot be themed consistently with the site. Keep values as ISO `YYYY-MM-DD`, pass all labels
+  from backend i18n, and use `controlSize="small"` when the picker sits beside compact inline
+  controls. Preserve its modal dialog/grid semantics, roving focus, keyboard navigation, Angular
+  Forms validation, and stylesheet-owned positioning; do not replace the native dialog top layer
+  with runtime inline positioning that would weaken the strict CSP.
+- Use `SiteSelectComponent` for single-select controls that need the site's controlled popover
+  visuals or interaction behavior that a native `<select>` cannot provide; otherwise keep the
+  native control. Feature owners must build localized `readonly SiteSelectOption[]` values and
+  preserve transport/query values exactly; the shared component must not inject `I18nService` or
+  know feature enums. Keep its select-only combobox/listbox ARIA contract, native-like
+  keyboard/typeahead commit and cancel behavior, Angular Forms/CVA integration, top-layer popover,
+  and stylesheet-owned anchor positioning. Do not add runtime inline positioning, visible search,
+  or a separate mobile modal.
+
+## Feature Structure
+
+Each feature owns its routes, models, endpoint services, pages, and feature-local components. Add
+subdirectories when they clarify a real boundary; do not force empty or one-file layers merely to
+match a template.
+
+- Page components coordinate feature state, services, and loading/error/empty states.
+- Presentational components receive feature data and actions through inputs/outputs and must not
+  depend on feature data/state services. They may use domain-independent cross-cutting i18n or
+  rendering services when passing all derived presentation through inputs would obscure the UI
+  contract.
+- Feature models must separate backend DTOs from UI models when their shapes differ.
+- Feature services own endpoint calls and DTO-to-UI mapping; components should not depend on backend DTO shape.
+
+## `app.config.ts`
+
+Keep browser/app-wide providers, interceptors, initializers, hydration, title strategy, and global
+error handling in `app.config.ts`; keep server-only providers in `app.config.server.ts`.
+
+No `AppModule`. No `NgModule` anywhere.
+
+## `app.config.server.ts` / SSR
+
+- Server-only providers belong in `app.config.server.ts`.
+- SSR API calls must rewrite relative `/api/*` URLs through the required `SSR_API_ORIGIN`
+  environment variable.
+- Public origin for canonical/transfer-cache mapping must come from explicit `SSR_PUBLIC_ORIGIN` or
+  required `APP_URL_SCHEMA` + `APP_DOMAIN`.
+- Browser-only features such as view tracking, engaged-view timers, reaction selection, downloads,
+  storage-backed preferences, and content authoring interactions must not run during SSR.
+- Browser-only access should go through injected Angular platform/document abstractions or narrowly
+  scoped helpers. Do not read browser globals at module scope, and do not make public SSR routes
+  depend on browser APIs being present.
+
+## API Error Contract
+
+- Treat `core/models/api-error.model.ts` as the canonical frontend API-error contract. Keep HTTP
+  error mapping and consumers aligned with that model and the backend error response; do not copy
+  the interface into instruction or feature files.
+
+## What Not to Introduce
+
+- NgRx or any global state library (unless proven necessary)
+- Repository classes that only proxy `ApiClient`
+- Abstract base components
+- Facades over services
+- Additional global state services unless 2+ features already need them
+- Premature generic abstractions
