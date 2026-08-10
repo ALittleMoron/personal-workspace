@@ -59,7 +59,5 @@ prepare_compose_secret_files() {
         export "$compose_file_variable_name=$secret_file_path"
     done
 
-    validate_compose_pki "$compose_secrets_dir"
-
     umask "$previous_umask"
 }

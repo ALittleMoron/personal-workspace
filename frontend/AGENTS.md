@@ -3,12 +3,30 @@
 These rules apply to all frontend-owned application code, configuration, tooling, and documentation
 under `frontend/`. Shared repository infrastructure and configuration must live outside `frontend/`.
 
+## Stack
+
+- Angular 22, standalone components only
+- Angular hybrid rendering with `@angular/ssr`: public site-build case-study and updates routes use SSR, while interactive admin routes remain CSR/hydrated Angular.
+- Keep Angular framework packages, Angular CLI/build tooling, and `angular-eslint` on the same Angular major.
+- SCSS for styles
+- Bootstrap 5 via `styles/main.scss`
+- Jest via `jest-preset-angular` for tests
+- Node.js production runtime for the frontend Docker image; do not reintroduce a frontend-owned nginx runtime unless a new design explicitly asks for it.
+
 ## TypeScript
 
 - `strict: true` — no exceptions
 - No `any`. Use `unknown` + type narrowing if shape is unknown
 - Explicit return types on public methods and functions
 - Prefer `interface` over `type` for object shapes
+
+## Naming
+
+- Files: `kebab-case` (e.g. `resume-detail-page.component.ts`)
+- Classes and interfaces: `PascalCase`
+- Signals: noun only — `questions`, `loading`, `error` (not `questionsSignal`, not `isLoading$`)
+- Observables: noun + `$` suffix — `questions$`
+- Services: `PascalCase` + `Service` suffix
 
 ## Components
 
@@ -57,7 +75,7 @@ under `frontend/`. Shared repository infrastructure and configuration must live 
 - Sanitize any backend or user-provided Markdown/HTML before binding it with `[innerHTML]`; SSR paths must not depend on browser-only sanitizer APIs.
 - Put reusable frontend upload helpers under `core/uploads/`, not `core/media/`; the latter matches
   a repository ignore pattern.
-- Fetch protected private-file content through authenticated APIs as `Blob` data. Browser object
+- Fetch private-file content through backend APIs as `Blob` data. Browser object
   URLs are short-lived capabilities: revoke superseded URLs and release all remaining URLs on
   errors, navigation, and component destruction; never persist or expose them as backend object
   URLs.
@@ -132,6 +150,16 @@ Test behavior, not implementation. Focus on what the component/service does, not
 
 Jest via `jest-preset-angular`. No Karma, no browser. Fast, CI-friendly.
 
+### What to Test
+
+| Subject | What to verify |
+|---|---|
+| Page components | All states render: loading, error, empty, populated |
+| Presentational components | Inputs render correctly, outputs emit on interaction |
+| Services | Correct endpoint called, response mapped to model |
+| `ApiClient` | Base URL prepended, error shape passed through |
+| Guards | Allow, redirect, and error behavior required by the guard contract |
+
 ### What Not to Test
 
 - Angular framework internals (router wiring, DI resolution)
@@ -158,14 +186,15 @@ TestBed.configureTestingModule({
 
 ```ts
 TestBed.configureTestingModule({
-  providers: [provideHttpClientTesting(), MatrixService, ApiClient],
+  providers: [provideHttpClientTesting(), CalendarService, ApiClient],
 });
 ```
 
 - Use `HttpTestingController` to assert requests and flush responses.
 - Test: correct URL called, response mapped to expected model shape.
 - Always call `httpMock.verify()` after each test.
-- When changing SSR route config, server entrypoints, public detail SEO, or transfer-cache behavior, update focused unit tests and `make ssr-smoke`.
+- When changing SSR route config, server entrypoints, public detail SEO, or transfer-cache behavior,
+  update focused unit tests and run the applicable frontend Make checks.
 - Review task-relevant coverage for every implementation change. Fully cover changed critical
   behavior, especially shared core and Markdown editor logic; repository coverage thresholds belong
   in test configuration, not in this file.

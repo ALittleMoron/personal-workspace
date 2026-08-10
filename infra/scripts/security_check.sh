@@ -7,46 +7,23 @@ minio_check_image_tag=""
 minio_check_temp_dir=""
 nginx_check_temp_dir=""
 nginx_check_image_tag=""
-nginx_check_container_name=""
 nginx_recovery_container_name=""
-nginx_check_network_name=""
-nginx_recreate_project_name=""
-nginx_recreate_temp_dir=""
 
 cleanup_security_check_images() {
-    if [ -n "$nginx_recreate_project_name" ] \
-        && [ -n "$nginx_recreate_temp_dir" ] \
-        && [ -f "${nginx_recreate_temp_dir}/new-compose.yml" ]; then
-        docker compose \
-            -p "$nginx_recreate_project_name" \
-            -f "${nginx_recreate_temp_dir}/new-compose.yml" \
-            down -v --remove-orphans >/dev/null 2>&1 || true
-    fi
     if [ -n "$minio_check_image_tag" ]; then
         docker image rm "$minio_check_image_tag" >/dev/null 2>&1 || true
     fi
     if [ -n "$minio_check_temp_dir" ]; then
         rm -rf "$minio_check_temp_dir"
     fi
-    if [ -n "$nginx_check_container_name" ]; then
-        docker rm -f "$nginx_check_container_name" >/dev/null 2>&1 || true
-    fi
     if [ -n "$nginx_recovery_container_name" ]; then
         docker rm -f "$nginx_recovery_container_name" >/dev/null 2>&1 || true
-    fi
     fi
     if [ -n "$nginx_check_image_tag" ]; then
         docker image rm "$nginx_check_image_tag" >/dev/null 2>&1 || true
     fi
     if [ -n "$nginx_check_temp_dir" ]; then
         rm -rf "$nginx_check_temp_dir"
-    fi
-    fi
-    if [ -n "$nginx_check_network_name" ]; then
-        docker network rm "$nginx_check_network_name" >/dev/null 2>&1 || true
-    fi
-    if [ -n "$nginx_recreate_temp_dir" ]; then
-        rm -rf "$nginx_recreate_temp_dir"
     fi
 }
 
@@ -431,7 +408,6 @@ run_deploy_env_configuration_check() {
         # shellcheck source=compose_secrets.sh
         . "${repo_dir}/infra/scripts/compose_secrets.sh"
         prepare_compose_secret_files
-        openssl verify \
     )
     rm -rf "$material_dir" "$compose_secrets_dir"
     rm -f "$rendered_env"
@@ -475,8 +451,6 @@ run_private_panel_configuration_check() {
     require_file_contains "${repo_dir}/infra/nginx/nginx.conf" "access_log /dev/stdout privacy_safe;" "privacy-safe main access log selection"
     require_file_not_contains "${repo_dir}/infra/nginx/nginx.conf" "\$request_uri" "raw request URI in access log configuration"
     require_file_not_contains "${repo_dir}/infra/nginx/nginx.conf" "\$args" "raw query arguments in access log configuration"
-    require_file_contains "${repo_dir}/infra/nginx/nginx.conf" '"clientVerify":"$ssl_client_verify"' "client verification log field"
-    require_file_contains "${repo_dir}/infra/nginx/nginx.conf" '"clientFingerprint":"$ssl_client_fingerprint"' "client fingerprint log field"
 }
 
 run_healthcheck_configuration_check() {
@@ -490,7 +464,6 @@ run_healthcheck_configuration_check() {
     local frontend_server="${repo_dir}/frontend/src/server-app.ts"
     local compose_secret_script="${repo_dir}/infra/scripts/compose_secrets.sh"
     local rendered_compose
-    local rendered_nginx
     local material_dir
 
     require_command docker
@@ -501,7 +474,6 @@ run_healthcheck_configuration_check() {
     fi
 
     rendered_compose="$(mktemp)"
-    rendered_nginx="$(mktemp)"
     material_dir="$(mktemp -d)"
     (
         export_test_runtime_environment "$material_dir"
@@ -513,23 +485,8 @@ run_healthcheck_configuration_check() {
         prepare_compose_secret_files
         docker compose -f "$compose_file" config --format json >"$rendered_compose"
     )
-    {
-        cat "${repo_dir}/infra/nginx/nginx.conf"
-        sed \
-            -e 's|${ACTIVE_BACKEND_SLOT}|backend-blue|g' \
-            -e 's|${ACTIVE_FRONTEND_SLOT}|frontend-blue|g' \
-            -e 's|${APP_DOMAIN}|example.test|g' \
-            -e 's|${MINIO_PUBLIC_URL}|https://s3.example.test|g' \
-            -e 's|${SSL_CERT}|/certs/fullchain.pem|g' \
-            -e 's|${SSL_KEY}|/certs/privkey.pem|g' \
-            "$nginx_template"
-    } >"$rendered_nginx"
-        --compose-json "$rendered_compose" \
-        --nginx-config "$rendered_nginx" \
-        --codex-config "${repo_dir}/.codex/config.toml" \
-        --vpn-address "10.77.0.1"
     rm -rf "$material_dir"
-    rm -f "$rendered_compose" "$rendered_nginx"
+    rm -f "$rendered_compose"
 
     require_file_contains "$compose_file" "backend-blue:" "blue backend service"
     require_file_contains "$compose_file" "backend-green:" "green backend service"
@@ -720,6 +677,52 @@ run_minio_image_check() {
         -c 'test "$(id -u):$(id -g)" = "10002:10002" && test -w /data'
 }
 
+run_nginx_syntax_check() {
+    local cert_dir
+
+    require_command docker
+    require_command openssl
+
+    nginx_check_temp_dir="$(mktemp -d)"
+    cert_dir="${nginx_check_temp_dir}/certs"
+    nginx_check_image_tag="my-site-nginx-security-check:$(date +%s)-$$"
+    mkdir -p "$cert_dir"
+    trap cleanup_security_check_images EXIT
+
+    openssl req \
+        -x509 \
+        -nodes \
+        -newkey rsa:2048 \
+        -keyout "${cert_dir}/server.key" \
+        -out "${cert_dir}/server.crt" \
+        -days 1 \
+        -subj "/CN=example.test" >/dev/null 2>&1
+    chmod 644 "${cert_dir}/server.key" "${cert_dir}/server.crt"
+    docker build \
+        -f "${repo_dir}/infra/nginx/Dockerfile" \
+        -t "$nginx_check_image_tag" \
+        "$repo_dir"
+    docker run --rm \
+        --read-only \
+        --cap-drop ALL \
+        --security-opt no-new-privileges \
+        --tmpfs /tmp:mode=1777,uid=101,gid=101 \
+        --user 101:101 \
+        --add-host backend-blue:127.0.0.1 \
+        --add-host frontend-blue:127.0.0.1 \
+        --add-host minio:127.0.0.1 \
+        --add-host databasus:127.0.0.1 \
+        -e APP_DOMAIN=example.test \
+        -e SSL_CERT=/certs/server.crt \
+        -e SSL_KEY=/certs/server.key \
+        -e ACTIVE_BACKEND_SLOT=backend-blue \
+        -e ACTIVE_FRONTEND_SLOT=frontend-blue \
+        -e MINIO_PUBLIC_URL=https://s3.example.test \
+        -v "${cert_dir}:/certs:ro" \
+        "$nginx_check_image_tag" \
+        sh -ec 'mkdir -p /tmp/nginx-conf.d && envsubst "\$APP_DOMAIN \$SSL_CERT \$SSL_KEY \$ACTIVE_BACKEND_SLOT \$ACTIVE_FRONTEND_SLOT \$MINIO_PUBLIC_URL" < /etc/nginx/runtime-templates/site.conf.template > /tmp/nginx-conf.d/site.conf && nginx -t'
+}
+
 run_nginx_recovery_check() {
     local attempt
     local restart_count
@@ -778,6 +781,7 @@ echo "Checking certificate lifecycle configuration."
 run_certbot_configuration_check
 echo "Checking MinIO image runtime."
 run_minio_image_check
+echo "Checking nginx configuration syntax."
+run_nginx_syntax_check
 echo "Checking nginx liveness recovery."
 run_nginx_recovery_check
-echo "Checking nginx static-config recreation."

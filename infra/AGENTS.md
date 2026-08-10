@@ -4,6 +4,18 @@ These rules apply to infrastructure owned by the whole deployment under `infra/*
 that belongs only to the backend or frontend must stay with that application; shared edge, network,
 deployment, and cross-service infrastructure belongs here or in the root Docker Compose files.
 
+## Edge And Network Boundaries
+
+- Keep nginx as the public edge for TLS, public domains, `/api/*`, exact `/sitemap.xml` and
+  `/robots.txt`, the frontend SSR runtime, and the public MinIO object endpoint. VPN-only internal
+  panels must remain bound to `VPN_BIND_ADDRESS`.
+- Keep security headers and CSP at nginx. Add only the exact asset, external origin, Swagger/UI,
+  upload-preview, or MinIO source required; do not use wildcard origins or broaden inline script or
+  style allowances.
+- Coarse anonymous public rate limiting belongs at nginx. Add backend rate limiting only for an
+  explicitly designed identity-aware or business quota keyed by a user, API key, tenant,
+  or subscription.
+
 ## Container Security
 
 - Do not add public service ports, `network_mode: host`, `privileged: true`, Docker socket mounts,

@@ -85,6 +85,47 @@ named from the base database plus the xdist worker suffix, such as `my_site_data
 Alembic migration tests must stay serial because they exercise upgrade/downgrade behavior against
 the shared base schema.
 
+## Patterns
+
+- Shared test cases: `backend/tests/test_cases.py` — `TestCase`, `ContainerTestCase`,
+  `ApiTestCase`, `StorageTestCase`
+- Mock providers for unit tests: `backend/tests/unit/mocks/providers/`
+- Test data factories in `backend/tests/helpers/factories/`: `CoreFactoryHelper` (domain objects), `ApiFactoryHelper` (request payloads) — plain Python, no Mimesis
+- Access common helpers via `self.factory.*`, `self.asserts.*`, and `self.collections.*` —
+  inherit from `TestCase` or a more specific test case class.
+- Defaults are allowed in tests, test helpers, and factories when they reduce noise and make the required fields for a scenario easier to see.
+- Unit test mocking: `Mock(spec=SomeStorageABC)` from `unittest.mock`
+- Unit tests that need only factories/assertions/collections: inherit `TestCase`.
+- Unit tests that need the Dishka test container but not HTTP helpers: inherit `ContainerTestCase`.
+- API tests: inherit `ApiTestCase` -> `self.api.*`, DI container helpers,
+  factories, assertions, and collection helpers.
+- Integration DB tests: inherit `StorageTestCase` -> `self.storage_helper.*`, session
+  auto-rollbacks, factories, assertions, and collection helpers.
+- Add API helper methods in `backend/tests/helpers/api.py` instead of duplicating endpoint URL strings across tests.
+- Put shared HTTP assertion methods in `AssertsHelper` under
+  `backend/tests/helpers/assertions.py`; call them as `self.asserts.status(...)`,
+  `self.asserts.error_message(...)`, `self.asserts.json_body(...)`, or
+  `self.asserts.resume_response_contract(...)`. Keep scenario-specific payload assertions visible
+  in the test body. When a test needs to inspect a response JSON body after checking only status,
+  call `self.asserts.status(...)` first and then `response.json()` directly.
+- Put small collection projection methods in `CollectionsHelper` under
+  `backend/tests/helpers/collections.py`; call them as `self.collections.slugs(items)`,
+  `self.collections.ids(items)`, or `self.collections.names_en(items)` when that is clearer than a
+  repeated comprehension.
+- Create domain test objects through `self.factory.core.*`; direct dataclass construction is only for cases not covered by factories yet.
+- Add reusable domain builders to `CoreFactoryHelper` when the same multi-object setup appears in
+  API, core, and integration tests; keep scenario-only data local to the test.
+- Unit API tests verify HTTP contract and use case calls. Unit core tests verify branch logic. Storage behavior belongs in integration tests.
+- Cover DB/storage changes with integration tests through `StorageTestCase`.
+- Do not add tests that only mirror ORM metadata/index declarations or trivial one-to-one model
+  converters. They do not validate behavior; cover storage behavior through integration tests
+  instead.
+- Do not add tests that pin dependency declarations, package versions, lockfile contents,
+  pyproject/package metadata, exact shell command strings, source-code text, private helper absence,
+  or other implementation trivia. If a high-risk invariant deserves automation, test the observable
+  behavior, generated schema, security boundary, migration/data result, query-plan coverage, or a
+  real Make-backed smoke path instead.
+
 ## Coverage Expectations
 
 - Review task-relevant coverage while implementing a change and fully cover changed core behavior.

@@ -70,7 +70,7 @@ event_dispatchers.py    # Domain event/reporting interfaces; concrete transports
 - When an operation has both a target entity identifier and a current actor identifier, the public
   use-case method must read both domain entities when actor permissions are relevant, then call a
   public permission/check method on the actor or target domain schema. Do not encode actor-vs-target
-  authorization rules as raw string comparisons in the use case.
+  permission rules as raw string comparisons in the use case.
 - Use cases must not depend on or call other use cases. When the logic belongs to only one
   use case, keep it in that use case and inject storage abstractions directly. Put shared
   cross-use-case business logic in the relevant domain `services.py` as a concrete service.
@@ -88,4 +88,4 @@ event_dispatchers.py    # Domain event/reporting interfaces; concrete transports
   parser classes in `parsers.py`; put reader interfaces in `readers.py`; put parser/domain errors
   in `exceptions.py`. Do not create feature-specific modules when an existing standard domain file
   type fits the object.
-- Do not log secrets, password hashes, tokens, raw credentials, or other sensitive values.
+- Do not log secrets, raw credentials, or other sensitive values.

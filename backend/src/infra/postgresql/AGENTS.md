@@ -2,14 +2,6 @@
 
 These rules apply to SQLAlchemy models, PostgreSQL storages, and Alembic migrations under `backend/src/infra/postgresql/`.
 
-## Performance Query Plans
-
-- Update the relevant query capture, seed data, expectations, documentation, or tests under
-  `backend/performance/query_plans/` when a PostgreSQL change affects query shape, a storage method,
-  an index or constraint, expected cardinality, or a query-plan seed-data assumption. For other
-  PostgreSQL changes, check whether the query-plan harness applies, but do not force an unrelated
-  harness edit.
-
 ## Data Models
 
 - Every SQLAlchemy datetime column, including nullable columns and matching Alembic column
