@@ -3,13 +3,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { Subject, of } from 'rxjs';
-import { MarkdownEditorComponent } from '../../../../../../core/editor/markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  MarkdownEditorImageCapability,
+} from '../../../../../../core/editor/markdown-editor.component';
 import { NotificationService } from '../../../../../../core/notifications/notification.service';
 import { provideI18nTesting } from '../../../../../../testing/i18n-testing';
 import { PersonDetail } from '../../../people/models/people.model';
 import { PeopleService } from '../../../people/services/people.service';
 import { KnowledgeDateDetail } from '../../models/dates.model';
 import { KnowledgeDatesService } from '../../services/dates.service';
+import { KnowledgeEditorImagesService } from '../../../shared/knowledge-editor-images.service';
 import { DateDetailComponent } from './date-detail.component';
 
 const DATE: KnowledgeDateDetail = {
@@ -24,6 +28,7 @@ const DATE: KnowledgeDateDetail = {
       id: 'file-1',
       itemId: 'date-1',
       kind: 'attachment',
+      processing: 'raw',
       mimeType: 'application/pdf',
       sizeBytes: 1024,
       name: 'Документ',
@@ -62,6 +67,7 @@ describe('DateDetailComponent', () => {
   let datesService: Record<string, jest.Mock>;
   let peopleService: Record<string, jest.Mock>;
   let notifications: { success: jest.Mock; error: jest.Mock };
+  let knowledgeEditorImages: { bind: jest.Mock };
   let router: Router;
 
   beforeEach(async () => {
@@ -89,6 +95,36 @@ describe('DateDetailComponent', () => {
       deleteTag: jest.fn(),
     };
     notifications = { success: jest.fn(), error: jest.fn() };
+    knowledgeEditorImages = {
+      bind: jest.fn(
+        (binding: {
+          uploaded: (file: KnowledgeDateDetail['attachments'][number]) => void;
+        }): MarkdownEditorImageCapability => ({
+          acceptedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          upload: (file) => {
+            const uploaded = {
+              id: 'date-editor-image-1',
+              itemId: 'date-1',
+              kind: 'attachment' as const,
+              processing: 'normalizedRasterImage' as const,
+              mimeType: 'image/webp',
+              sizeBytes: 7,
+              name: file.name,
+              originalName: file.name,
+              contentPath: '/api/admin/knowledge/files/date-editor-image-1/content',
+              createdAt: DATE.createdAt,
+              updatedAt: DATE.updatedAt,
+            };
+            binding.uploaded(uploaded);
+            return of({
+              markdownUrl:
+                '/api/admin/knowledge/files/date-editor-image-1/content#fileId=date-editor-image-1',
+            });
+          },
+          loadPreview: () => of(new Blob(['private'], { type: 'image/webp' })),
+        }),
+      ),
+    };
 
     await TestBed.configureTestingModule({
       imports: [DateDetailComponent],
@@ -102,6 +138,7 @@ describe('DateDetailComponent', () => {
           },
         },
         { provide: KnowledgeDatesService, useValue: datesService },
+        { provide: KnowledgeEditorImagesService, useValue: knowledgeEditorImages },
         { provide: PeopleService, useValue: peopleService },
         { provide: NotificationService, useValue: notifications },
       ],
@@ -119,7 +156,7 @@ describe('DateDetailComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('loads a yearless leap date and disables inline image uploads', () => {
+  it('loads a yearless leap date and binds inline image uploads', () => {
     expect(fixture.componentInstance.dateForm.controls.date.getRawValue()).toEqual({
       day: '29',
       month: '2',
@@ -127,7 +164,104 @@ describe('DateDetailComponent', () => {
     });
     const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
       .componentInstance as MarkdownEditorStubComponent;
-    expect(editor.imageUploadsEnabled()).toBe(false);
+    expect(editor.imageCapability()).not.toBeNull();
+  });
+
+  it('adds an editor image to attachments without replacing unsaved Date text', () => {
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
+      .componentInstance as MarkdownEditorStubComponent;
+    fixture.componentInstance.setDescription('Unsaved Date text');
+
+    editor
+      .imageCapability()
+      ?.upload(new File(['image'], 'date.png', { type: 'image/png' }))
+      .subscribe();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.date()?.attachments).toContainEqual(
+      expect.objectContaining({
+        id: 'date-editor-image-1',
+        processing: 'normalizedRasterImage',
+      }),
+    );
+    expect(fixture.componentInstance.dateForm.controls.description.value).toBe('Unsaved Date text');
+  });
+
+  it('blocks Save until Markdown-first image completion has appended its attachment', () => {
+    const saveResponse = new Subject<KnowledgeDateDetail>();
+    datesService['updateDate'].mockReturnValue(saveResponse);
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
+      .componentInstance as MarkdownEditorStubComponent;
+    const binding = knowledgeEditorImages.bind.mock.calls[0]![0] as {
+      uploaded: (file: KnowledgeDateDetail['attachments'][number]) => void;
+    };
+    const uploaded = {
+      id: 'date-editor-image-race',
+      itemId: 'date-1',
+      kind: 'attachment' as const,
+      processing: 'normalizedRasterImage' as const,
+      mimeType: 'image/webp',
+      sizeBytes: 7,
+      name: 'date-race.png',
+      originalName: 'date-race.png',
+      contentPath: '/api/admin/knowledge/files/date-editor-image-race/content',
+      createdAt: DATE.createdAt,
+      updatedAt: DATE.updatedAt,
+    };
+    const markdown = `![date-race.png](${uploaded.contentPath}#fileId=${uploaded.id})`;
+    const markdownCompletion = new Subject<string>();
+    const attachmentCompletion = new Subject<void>();
+    markdownCompletion.subscribe((value) => editor.valueChange.emit(value));
+    attachmentCompletion.subscribe(() => binding.uploaded(uploaded));
+
+    editor.imageUploadPendingChange.emit(true);
+    markdownCompletion.next(markdown);
+    fixture.detectChanges();
+    fixture.componentInstance.saveDate();
+    expect(datesService.updateDate).not.toHaveBeenCalled();
+
+    attachmentCompletion.next();
+    expect(fixture.componentInstance.editorImagePending()).toBe(true);
+    expect(
+      (fixture.nativeElement.querySelector('[data-testid="date-detail-save"]') as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+
+    editor.imageUploadPendingChange.emit(false);
+    fixture.detectChanges();
+    const capabilityBeforeSave = editor.imageCapability();
+    fixture.componentInstance.saveDate();
+    fixture.detectChanges();
+
+    expect(datesService.updateDate).toHaveBeenCalledWith(
+      'date-1',
+      expect.objectContaining({ description: markdown }),
+    );
+    expect(editor.imageCapability()).toBe(capabilityBeforeSave);
+    expect(editor.uploadInteractionsDisabled()).toBe(true);
+
+    saveResponse.next({
+      ...DATE,
+      description: markdown,
+      attachments: [...DATE.attachments, uploaded],
+    });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.dateForm.controls.description.value).toBe(markdown);
+    expect(editor.uploadInteractionsDisabled()).toBe(false);
+  });
+
+  it('refreshes capability-backed preview state when a referenced attachment is deleted', () => {
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
+      .componentInstance as MarkdownEditorStubComponent;
+    const initialRevision = editor.imagePreviewRevision();
+    const attachment = fixture.componentInstance.date()!.attachments[0]!;
+
+    fixture.componentInstance.deleteAttachment(attachment);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.date()?.attachments).not.toContainEqual(attachment);
+    expect(editor.imagePreviewRevision()).toBe(initialRevision + 1);
   });
 
   it('marks only required date fields with red asterisks', () => {
@@ -340,6 +474,9 @@ class MarkdownEditorStubComponent {
   readonly value = input.required<string>();
   readonly language = input.required<'ru' | 'en'>();
   readonly accessibleLabel = input.required<string>();
-  readonly imageUploadsEnabled = input.required<boolean>();
+  readonly imageCapability = input.required<MarkdownEditorImageCapability | null>();
+  readonly uploadInteractionsDisabled = input.required<boolean>();
+  readonly imagePreviewRevision = input.required<number>();
   readonly valueChange = output<string>();
+  readonly imageUploadPendingChange = output<boolean>();
 }

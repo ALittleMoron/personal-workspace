@@ -1,4 +1,5 @@
 from io import BytesIO
+from unittest.mock import patch
 
 import pytest
 from PIL import Image
@@ -20,11 +21,24 @@ class TestPersonPhotoContentProcessor:
         self.processor = PersonPhotoContentProcessor(
             max_width_px=8,
             max_height_px=8,
+            max_source_pixels=200,
             webp_quality=82,
             webp_method=6,
         )
 
-    def test_normalizes_supported_photo_to_bounded_webp(self) -> None:
+    @pytest.mark.parametrize(
+        ("image_format", "mime_type"),
+        [
+            ("PNG", "image/png"),
+            ("JPEG", "image/jpeg"),
+            ("WEBP", "image/webp"),
+        ],
+    )
+    def test_normalizes_supported_static_image_at_source_pixel_limit(
+        self,
+        image_format: str,
+        mime_type: str,
+    ) -> None:
         result = self.processor.process(
             params=KnowledgeFileUploadParams(
                 id="1" * 32,
@@ -32,9 +46,9 @@ class TestPersonPhotoContentProcessor:
                 author_username="owner",
                 kind=KnowledgeFileKind.PERSON_PHOTO,
                 name="Photo",
-                original_name="photo.png",
-                mime_type="image/png",
-                content=image_bytes(image_format="PNG"),
+                original_name=f"photo.{image_format.lower()}",
+                mime_type=mime_type,
+                content=image_bytes(image_format=image_format),
             ),
         )
 
@@ -43,6 +57,30 @@ class TestPersonPhotoContentProcessor:
             assert image.format == "WEBP"
             assert image.width <= 8
             assert image.height <= 8
+
+    def test_rejects_source_pixel_count_above_limit_before_loading_pixels(self) -> None:
+        params = KnowledgeFileUploadParams(
+            id="1" * 32,
+            item_id="2" * 32,
+            author_username="owner",
+            kind=KnowledgeFileKind.PERSON_PHOTO,
+            name="Photo",
+            original_name="photo.png",
+            mime_type="image/png",
+            content=image_bytes(image_format="PNG", size=(201, 1)),
+        )
+
+        with (
+            patch.object(
+                Image.Image,
+                "load",
+                side_effect=AssertionError("oversized source pixels were loaded"),
+            ) as load,
+            pytest.raises(FileImageOptimizationError),
+        ):
+            self.processor.process(params=params)
+
+        load.assert_not_called()
 
     def test_rejects_declared_mime_mismatch(self) -> None:
         with pytest.raises(FileImageOptimizationError):

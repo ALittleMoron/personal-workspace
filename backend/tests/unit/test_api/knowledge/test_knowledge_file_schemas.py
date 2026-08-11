@@ -6,6 +6,7 @@ from core.knowledge.files.enums import KnowledgeFileKind
 from core.knowledge.files.schemas import KnowledgeFileUploadParams
 from entrypoints.litestar.api.knowledge.files.schemas import (
     KnowledgeAttachmentUploadRequestSchema,
+    KnowledgeEditorImageUploadRequestSchema,
     KnowledgePhotoUploadRequestSchema,
 )
 from infra.config.constants import constants
@@ -95,5 +96,48 @@ async def test_photo_schema_builds_domain_upload_params_with_filename_as_name() 
         assert result.original_name == "portrait.png"
         assert result.mime_type == "image/png"
         assert result.content == b"png"
+    finally:
+        upload_file.file.close()
+
+
+async def test_editor_image_schema_builds_bounded_attachment_upload_params() -> None:
+    upload_file = RecordingUploadFile(
+        filename="diagram.png",
+        content_type="image/png",
+        file_data=b"png",
+    )
+    try:
+        schema = KnowledgeEditorImageUploadRequestSchema(file=upload_file)
+
+        result = await schema.to_domain_schema(
+            file_id="1" * 32,
+            item_id="2" * 32,
+            author_username="owner",
+        )
+
+        assert result == KnowledgeFileUploadParams(
+            id="1" * 32,
+            item_id="2" * 32,
+            author_username="owner",
+            kind=KnowledgeFileKind.ATTACHMENT,
+            name="diagram.png",
+            original_name="diagram.png",
+            mime_type="image/png",
+            content=b"png",
+        )
+        assert upload_file.read_size == constants.knowledge_files.photo_max_size_bytes + 1
+    finally:
+        upload_file.file.close()
+
+
+def test_editor_image_schema_rejects_non_raster_mime() -> None:
+    upload_file = UploadFile(
+        filename="diagram.gif",
+        content_type="image/gif",
+        file_data=b"gif",
+    )
+    try:
+        with pytest.raises(ValidationError):
+            KnowledgeEditorImageUploadRequestSchema(file=upload_file)
     finally:
         upload_file.file.close()

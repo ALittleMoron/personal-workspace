@@ -31,6 +31,7 @@ class AttachmentContentProcessor(FileContentProcessor):
 class PersonPhotoContentProcessor(KnowledgePhotoProcessor):
     max_width_px: int
     max_height_px: int
+    max_source_pixels: int
     webp_quality: int
     webp_method: int
 
@@ -39,6 +40,8 @@ class PersonPhotoContentProcessor(KnowledgePhotoProcessor):
             with catch_warnings():
                 simplefilter("error", Image.DecompressionBombWarning)
                 with Image.open(BytesIO(params.content)) as source_image:
+                    if source_image.width * source_image.height > self.max_source_pixels:
+                        raise FileImageOptimizationError
                     source_image.load()
                     detected_mime_type = Image.MIME.get(source_image.format or "")
                     if detected_mime_type != params.mime_type:

@@ -2,7 +2,7 @@ from infra.postgresql.models.knowledge.dates import (
     KnowledgeDateDetailsModel,
     KnowledgeDatePersonModel,
 )
-from infra.postgresql.models.knowledge.files import KnowledgeFileModel
+from infra.postgresql.models.knowledge.files import KnowledgeItemFileModel
 from infra.postgresql.models.knowledge.items import (
     KnowledgeItemModel,
     KnowledgeItemTagModel,
@@ -17,7 +17,7 @@ from infra.postgresql.models.knowledge.people import (
 __all__ = [
     "KnowledgeDateDetailsModel",
     "KnowledgeDatePersonModel",
-    "KnowledgeFileModel",
+    "KnowledgeItemFileModel",
     "KnowledgeItemModel",
     "KnowledgeItemTagModel",
     "KnowledgeTagModel",

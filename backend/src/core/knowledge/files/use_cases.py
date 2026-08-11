@@ -6,7 +6,7 @@ from core.knowledge.exceptions import (
     KnowledgeFileNotFoundError,
 )
 from core.knowledge.files.clients import KnowledgeFileRollbackRegistrar
-from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.files.enums import KnowledgeFileKind, KnowledgeFileProcessing
 from core.knowledge.files.schemas import (
     KnowledgeFile,
     KnowledgeFileContent,
@@ -30,6 +30,7 @@ class KnowledgeFilesUseCase:
         self,
         *,
         params: KnowledgeFileUploadParams,
+        processing: KnowledgeFileProcessing,
         rollback_registrar: KnowledgeFileRollbackRegistrar,
         current_datetime: datetime,
     ) -> KnowledgeFile:
@@ -41,6 +42,7 @@ class KnowledgeFilesUseCase:
             raise InvalidKnowledgeDataError
         file = await self.file_service.create_file(
             params=params,
+            processing=processing,
             now=current_datetime,
             rollback_registrar=rollback_registrar,
         )
@@ -76,10 +78,12 @@ class KnowledgeFilesUseCase:
         )
         object_names_to_delete: tuple[str, ...] = ()
         if existing_photo is not None:
-            await self.file_service.delete_file(file=existing_photo)
-            object_names_to_delete = (existing_photo.relative_path,)
+            deleted = await self.file_service.delete_file(file=existing_photo)
+            if deleted is not None:
+                object_names_to_delete = (deleted.relative_path,)
         file = await self.file_service.create_file(
             params=params,
+            processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
             now=current_datetime,
             rollback_registrar=rollback_registrar,
         )
@@ -153,7 +157,7 @@ class KnowledgeFilesUseCase:
         )
         return KnowledgeFileMutationResult(
             file=None,
-            object_names_to_delete=(deleted.relative_path,),
+            object_names_to_delete=((deleted.relative_path,) if deleted is not None else ()),
         )
 
     async def delete_person_photo(
@@ -187,7 +191,7 @@ class KnowledgeFilesUseCase:
         )
         return KnowledgeFileMutationResult(
             file=None,
-            object_names_to_delete=(deleted.relative_path,),
+            object_names_to_delete=((deleted.relative_path,) if deleted is not None else ()),
         )
 
     async def get_file_content(

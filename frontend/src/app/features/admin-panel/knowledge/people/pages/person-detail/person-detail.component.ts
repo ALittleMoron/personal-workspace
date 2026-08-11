@@ -24,7 +24,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../../../../core/models/api-error.model';
 import { I18nService } from '../../../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../../../core/i18n/translate.pipe';
-import { MarkdownEditorComponent } from '../../../../../../core/editor/markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  MarkdownEditorImageCapability,
+} from '../../../../../../core/editor/markdown-editor.component';
 import { NotificationService } from '../../../../../../core/notifications/notification.service';
 import { ErrorMessageComponent } from '../../../../../../shared/ui/error-message/error-message.component';
 import { LoadingSpinnerComponent } from '../../../../../../shared/ui/loading-spinner/loading-spinner.component';
@@ -51,7 +54,6 @@ import {
   validationMessage,
 } from '../../../../utils/admin-validation';
 import {
-  KnowledgeFile,
   KnowledgeTag,
   PersonBirthday,
   PersonDetail,
@@ -62,6 +64,8 @@ import {
   RelationshipTypePayload,
 } from '../../models/people.model';
 import { PeopleService } from '../../services/people.service';
+import { KnowledgeEditorImagesService } from '../../../shared/knowledge-editor-images.service';
+import { KnowledgeFile } from '../../../shared/knowledge-file.model';
 
 interface PersonFormValue {
   lastName: string;
@@ -111,6 +115,7 @@ const RELATED_DATE_PREVIEW_LIMIT = 10;
 })
 export class PersonDetailComponent implements OnInit, OnDestroy {
   private readonly peopleService = inject(PeopleService);
+  private readonly knowledgeEditorImages = inject(KnowledgeEditorImagesService);
   private readonly notifications = inject(NotificationService);
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
@@ -146,6 +151,7 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
   readonly photoError = signal<string | null>(null);
   readonly attachmentUploading = signal(false);
   readonly attachmentError = signal<string | null>(null);
+  readonly editorImagePending = signal(false);
   readonly tagSearch = signal('');
   readonly tagDialogOpen = signal(false);
   readonly tagDraft = signal('');
@@ -161,6 +167,8 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
   });
   readonly relationshipsExpanded = signal(false);
   readonly relatedDatesExpanded = signal(false);
+  readonly editorImageCapability = signal<MarkdownEditorImageCapability | null>(null);
+  readonly imagePreviewRevision = signal(0);
 
   readonly personForm = this.formBuilder.group({
     lastName: ['', [trimRequired, Validators.maxLength(ADMIN_VALIDATION_LIMITS.shortText)]],
@@ -306,6 +314,15 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.personId = this.route.snapshot.paramMap.get('id') ?? '';
+    if (this.personId !== '') {
+      this.editorImageCapability.set(
+        this.knowledgeEditorImages.bind({
+          itemId: this.personId,
+          attachments: () => this.person()?.attachments ?? [],
+          uploaded: (file) => this.addEditorImageAttachment(file),
+        }),
+      );
+    }
     this.loadPerson();
     this.loadTaxonomies();
     this.searchPeople('');
@@ -324,6 +341,7 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (person) => {
           this.person.set(person);
+          this.refreshImagePreview();
           this.patchPerson(person);
           this.loading.set(false);
           this.loadPhoto(person.photo);
@@ -387,6 +405,9 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
   }
 
   savePerson(): void {
+    if (this.editorImagePending() || this.saving()) {
+      return;
+    }
     this.submitted.set(true);
     this.personForm.markAllAsTouched();
     this.relationshipForms.markAllAsTouched();
@@ -404,6 +425,7 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (person) => {
           this.person.set(person);
+          this.refreshImagePreview();
           this.patchPerson(person);
           this.saving.set(false);
           this.submitted.set(false);
@@ -588,6 +610,7 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
               ? null
               : { ...person, attachments: [...person.attachments, attachment] },
           );
+          this.refreshImagePreview();
           this.notifications.success(this.i18n.translate('knowledgePeople.attachmentSaveSuccess'));
         },
         error: () => {
@@ -621,6 +644,7 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
                   ),
                 },
           );
+          this.refreshImagePreview();
           this.notifications.success(
             this.i18n.translate('knowledgePeople.attachmentRenameSuccess'),
           );
@@ -655,6 +679,7 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
                   attachments: person.attachments.filter((file) => file.id !== attachment.id),
                 },
           );
+          this.refreshImagePreview();
           this.notifications.success(
             this.i18n.translate('knowledgePeople.attachmentDeleteSuccess'),
           );
@@ -685,6 +710,24 @@ export class PersonDetailComponent implements OnInit, OnDestroy {
         error: () =>
           this.notifications.error(this.i18n.translate('knowledgePeople.attachmentDownloadError')),
       });
+  }
+
+  private addEditorImageAttachment(attachment: KnowledgeFile): void {
+    let added = false;
+    this.person.update((person) => {
+      if (person === null || person.attachments.some((file) => file.id === attachment.id)) {
+        return person;
+      }
+      added = true;
+      return { ...person, attachments: [...person.attachments, attachment] };
+    });
+    if (added) {
+      this.refreshImagePreview();
+    }
+  }
+
+  private refreshImagePreview(): void {
+    this.imagePreviewRevision.update((revision) => revision + 1);
   }
 
   openTagDialog(): void {

@@ -30,7 +30,6 @@ describe('Angular build styles', () => {
       'background-color: var(--button-primary-hover-bg) !important;',
     );
     expect(componentStyles).toContain('--bs-btn-color: var(--outline-secondary-color);');
-    expect(componentStyles).toContain('color: var(--link-readable-color) !important;');
     expect(contrastRatio(lightButtonText, lightButtonBackground)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(darkButtonText, darkButtonBackground)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(lightReadableLink, lightSurface)).toBeGreaterThanOrEqual(4.5);

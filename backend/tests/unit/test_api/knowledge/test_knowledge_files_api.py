@@ -7,8 +7,8 @@ import pytest
 import pytest_asyncio
 from httpx import codes
 
-from core.knowledge.exceptions import KnowledgeFileNotFoundError
-from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.exceptions import KnowledgeFileNotFoundError, KnowledgeItemNotFoundError
+from core.knowledge.files.enums import KnowledgeFileKind, KnowledgeFileProcessing
 from core.knowledge.files.schemas import (
     KnowledgeFile,
     KnowledgeFileContent,
@@ -32,17 +32,26 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.cleaner = await self.container.get_knowledge_file_object_cleaner()
         self.rollback_registrar = await self.container.get_knowledge_file_rollback_registrar()
 
-    def file(self, *, kind: KnowledgeFileKind) -> KnowledgeFile:
+    def file(
+        self,
+        *,
+        kind: KnowledgeFileKind,
+        processing: KnowledgeFileProcessing = KnowledgeFileProcessing.RAW,
+        relative_path: str = "private/object",
+        mime_type: str = "text/html",
+        original_name: str = 'résumé "<script>.html',
+    ) -> KnowledgeFile:
         return KnowledgeFile(
             id="1" * 32,
             item_id="2" * 32,
             author_username="test",
             kind=kind,
-            relative_path="private/object",
-            mime_type="text/html",
+            processing=processing,
+            relative_path=relative_path,
+            mime_type=mime_type,
             size_bytes=15,
             name="Résumé",
-            original_name='résumé "<script>.html',
+            original_name=original_name,
             original_sha256="a" * 64,
             created_at=NOW,
             updated_at=NOW,
@@ -71,7 +80,11 @@ class TestKnowledgeFilesApi(ApiTestCase):
 
     def test_photo_content_is_inline_normalized_webp(self) -> None:
         self.use_case.get_file_content.return_value = KnowledgeFileContent(
-            file=self.file(kind=KnowledgeFileKind.PERSON_PHOTO),
+            file=self.file(
+                kind=KnowledgeFileKind.PERSON_PHOTO,
+                processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
+                mime_type="image/webp",
+            ),
             content=content_chunks(),
         )
 
@@ -82,6 +95,67 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.asserts.status(response=response, expected_status=codes.OK)
         assert response.headers["content-type"] == "image/webp"
         assert response.headers["content-disposition"] == 'inline; filename="photo.webp"'
+
+    def test_editor_image_content_is_inline_normalized_webp(self) -> None:
+        self.use_case.get_file_content.return_value = KnowledgeFileContent(
+            file=self.file(
+                kind=KnowledgeFileKind.ATTACHMENT,
+                processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
+                relative_path="editor-images/private.webp",
+                mime_type="image/webp",
+                original_name="private.png",
+            ),
+            content=content_chunks(),
+        )
+
+        response = self.api.client.get(
+            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+        )
+
+        self.asserts.status(response=response, expected_status=codes.OK)
+        assert response.headers["content-type"] == "image/webp"
+        assert response.headers["content-disposition"] == 'inline; filename="image.webp"'
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers["cache-control"] == "no-store"
+
+    def test_arbitrary_attachment_with_image_mime_is_still_forced_to_download(self) -> None:
+        self.use_case.get_file_content.return_value = KnowledgeFileContent(
+            file=self.file(
+                kind=KnowledgeFileKind.ATTACHMENT,
+                relative_path="attachments/unverified.webp",
+                mime_type="image/webp",
+                original_name="unverified.webp",
+            ),
+            content=content_chunks(),
+        )
+
+        response = self.api.client.get(
+            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+        )
+
+        self.asserts.status(response=response, expected_status=codes.OK)
+        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-disposition"].startswith("attachment;")
+
+    def test_raw_attachment_cannot_spoof_editor_image_inline_delivery(self) -> None:
+        self.use_case.get_file_content.return_value = KnowledgeFileContent(
+            file=self.file(
+                kind=KnowledgeFileKind.ATTACHMENT,
+                processing=KnowledgeFileProcessing.RAW,
+                relative_path="editor-images/spoofed.webp",
+                mime_type="image/webp",
+                original_name="spoofed.webp",
+            ),
+            content=content_chunks(),
+        )
+
+        response = self.api.client.get(
+            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+        )
+
+        self.asserts.status(response=response, expected_status=codes.OK)
+        assert response.headers["content-type"] == "application/octet-stream"
+        assert response.headers["content-disposition"].startswith("attachment;")
 
     def test_foreign_file_is_indistinguishable_from_missing_file(self) -> None:
         self.use_case.get_file_content.side_effect = KnowledgeFileNotFoundError
@@ -111,6 +185,70 @@ class TestKnowledgeFilesApi(ApiTestCase):
         assert body["contentPath"] == f"/api/admin/knowledge/files/{file.id}/content"
         assert "relativePath" not in body
         assert "url" not in body
+
+    def test_editor_image_upload_returns_attachment_metadata_and_protected_content_path(
+        self,
+    ) -> None:
+        file = self.file(
+            kind=KnowledgeFileKind.ATTACHMENT,
+            processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
+            relative_path="editor-images/private.webp",
+            mime_type="image/webp",
+            original_name="private.png",
+        )
+        self.use_case.upload_attachment.return_value = file
+
+        response = self.api.client.post(
+            f"/api/admin/knowledge/items/{file.item_id}/editor-images",
+            files={"file": ("private.png", b"png-bytes", "image/png")},
+        )
+
+        self.asserts.status(response=response, expected_status=codes.CREATED)
+        body = response.json()
+        assert body["kind"] == KnowledgeFileKind.ATTACHMENT
+        assert body["processing"] == KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE
+        assert body["mimeType"] == "image/webp"
+        assert body["contentPath"] == f"/api/admin/knowledge/files/{file.id}/content"
+        params = self.use_case.upload_attachment.await_args.kwargs["params"]
+        assert params.item_id == file.item_id
+        assert params.author_username == "test"
+        assert params.kind == KnowledgeFileKind.ATTACHMENT
+        assert params.original_name == "private.png"
+        assert params.mime_type == "image/png"
+        assert params.content == b"png-bytes"
+        assert (
+            self.use_case.upload_attachment.await_args.kwargs["processing"]
+            == KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE
+        )
+        assert (
+            self.use_case.upload_attachment.await_args.kwargs["rollback_registrar"]
+            is self.rollback_registrar
+        )
+        assert self.use_case.upload_attachment.await_args.kwargs["current_datetime"] == NOW
+
+    def test_editor_image_upload_rejects_disallowed_declared_mime(self) -> None:
+        response = self.api.client.post(
+            f"/api/admin/knowledge/items/{'2' * 32}/editor-images",
+            files={"file": ("private.gif", b"gif-bytes", "image/gif")},
+        )
+
+        self.asserts.status(response=response, expected_status=codes.BAD_REQUEST)
+        self.use_case.upload_attachment.assert_not_awaited()
+
+    def test_editor_image_upload_hides_foreign_or_missing_item(self) -> None:
+        self.use_case.upload_attachment.side_effect = KnowledgeItemNotFoundError
+
+        response = self.api.client.post(
+            f"/api/admin/knowledge/items/{'2' * 32}/editor-images",
+            files={"file": ("private.png", b"png-bytes", "image/png")},
+        )
+
+        self.asserts.error_message(
+            response=response,
+            expected_status=codes.NOT_FOUND,
+            expected_message=KnowledgeItemNotFoundError.message,
+        )
+        assert self.use_case.upload_attachment.await_args.kwargs["params"].author_username == "test"
 
     def test_attachment_upload_accepts_body_above_litestar_default_limit(self) -> None:
         file = self.file(kind=KnowledgeFileKind.ATTACHMENT)
@@ -167,7 +305,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
             is self.rollback_registrar
         )
         current_datetime = self.use_case.upload_attachment.await_args.kwargs["current_datetime"]
-        assert current_datetime.tzinfo is not None
+        assert current_datetime == NOW
 
     def test_attachment_delete_schedules_cleanup_after_commit(self) -> None:
         file = self.file(kind=KnowledgeFileKind.ATTACHMENT)
@@ -183,7 +321,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
 
         self.asserts.status(response=response, expected_status=codes.NO_CONTENT)
         current_datetime = self.use_case.delete_attachment.await_args.kwargs["current_datetime"]
-        assert current_datetime.tzinfo is not None
+        assert current_datetime == NOW
         action = add_action.call_args.kwargs["action"]
         assert isinstance(action, partial)
         assert action.keywords == {"object_names": (file.relative_path,)}

@@ -3,7 +3,7 @@ from typing import Annotated, Self, cast
 from litestar.datastructures.upload_file import UploadFile
 from pydantic import ConfigDict, Field, model_validator
 
-from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.files.enums import KnowledgeFileKind, KnowledgeFileProcessing
 from core.knowledge.files.schemas import (
     KnowledgeFile,
     KnowledgeFileUpdateParams,
@@ -18,6 +18,7 @@ class KnowledgeFileResponseSchema(CamelCaseSchema):
     id: Annotated[str, Field(title="Identifier")]
     item_id: Annotated[str, Field(title="Knowledge item identifier")]
     kind: Annotated[KnowledgeFileKind, Field(title="File kind")]
+    processing: Annotated[KnowledgeFileProcessing, Field(title="File processing provenance")]
     mime_type: Annotated[str, Field(title="MIME type")]
     size_bytes: Annotated[int, Field(title="Size in bytes")]
     name: Annotated[str, Field(title="Display name")]
@@ -34,6 +35,7 @@ class KnowledgeFileResponseSchema(CamelCaseSchema):
                 id=schema.id,
                 item_id=schema.item_id,
                 kind=schema.kind,
+                processing=schema.processing,
                 mime_type=schema.mime_type,
                 size_bytes=schema.size_bytes,
                 name=schema.name,
@@ -121,6 +123,33 @@ class KnowledgePhotoUploadRequestSchema(KnowledgeUploadRequestSchema):
             item_id=person_id,
             author_username=author_username,
             kind=KnowledgeFileKind.PERSON_PHOTO,
+            name=original_name,
+            max_size_bytes=constants.knowledge_files.photo_max_size_bytes,
+        )
+
+
+class KnowledgeEditorImageUploadRequestSchema(KnowledgeUploadRequestSchema):
+    @model_validator(mode="after")
+    def validate_allowed_mime_type(self) -> Self:  # noqa: N804
+        mime_type = self.file.content_type or "application/octet-stream"
+        if mime_type not in constants.knowledge_files.photo_mime_types:
+            message = "Uploaded editor image MIME type is not allowed"
+            raise ValueError(message)
+        return self
+
+    async def to_domain_schema(
+        self,
+        *,
+        file_id: str,
+        item_id: str,
+        author_username: str,
+    ) -> KnowledgeFileUploadParams:
+        original_name = self.file.filename
+        return await self.build_upload_params(
+            file_id=file_id,
+            item_id=item_id,
+            author_username=author_username,
+            kind=KnowledgeFileKind.ATTACHMENT,
             name=original_name,
             max_size_bytes=constants.knowledge_files.photo_max_size_bytes,
         )

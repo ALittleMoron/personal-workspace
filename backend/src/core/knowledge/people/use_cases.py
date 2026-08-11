@@ -11,6 +11,7 @@ from core.knowledge.exceptions import (
     PersonRelationshipTypeNotFoundError,
 )
 from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.files.services import KnowledgeFileCrudService
 from core.knowledge.files.storages import KnowledgeFilesStorage
 from core.knowledge.items.enums import KnowledgeItemKind
 from core.knowledge.items.schemas import (
@@ -43,6 +44,7 @@ class PeopleUseCase:
     people_storage: PeopleStorage
     dates_storage: KnowledgeDatesStorage
     file_storage: KnowledgeFilesStorage
+    file_service: KnowledgeFileCrudService
 
     async def list_people(self, *, filters: PersonFilters) -> PeoplePage:
         search_query = (
@@ -386,6 +388,7 @@ class PeopleUseCase:
             item_id=person_id,
             author_username=author_username,
         )
+        object_names_to_delete = await self.file_service.delete_files(files=files)
         await self.item_service.delete_item(
             item_id=person_id,
             author_username=author_username,
@@ -403,7 +406,7 @@ class PeopleUseCase:
             kind=KnowledgeItemKind.DATE,
             updated_at=current_datetime,
         )
-        return tuple(file.relative_path for file in files)
+        return object_names_to_delete
 
 
 @dataclass(kw_only=True, slots=True, frozen=True)

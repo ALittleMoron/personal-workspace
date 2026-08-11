@@ -1,5 +1,6 @@
-import { KnowledgeFile, KnowledgeTag } from '../../people/models/people.model';
+import { KnowledgeTag } from '../../people/models/people.model';
 import { AnnualDateValue } from '../../shared/annual-date';
+import { KnowledgeFile } from '../../shared/knowledge-file.model';
 
 export type KnowledgeDateListSort =
   'dateAsc' | 'dateDesc' | 'updatedNewest' | 'updatedOldest' | 'nameAsc' | 'nameDesc';

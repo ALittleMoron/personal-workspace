@@ -1,3 +1,5 @@
+import { KnowledgeFile } from '../../shared/knowledge-file.model';
+
 export type PersonListSort = 'updatedNewest' | 'updatedOldest' | 'nameAsc' | 'nameDesc';
 export type PersonRelationshipDirection = 'forward' | 'reverse';
 
@@ -10,19 +12,6 @@ export interface PersonBirthday {
 export interface KnowledgeTag {
   id: string;
   name: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface KnowledgeFile {
-  id: string;
-  itemId: string;
-  kind: 'attachment' | 'personPhoto';
-  mimeType: string;
-  sizeBytes: number;
-  name: string;
-  originalName: string;
-  contentPath: string;
   createdAt: string;
   updatedAt: string;
 }

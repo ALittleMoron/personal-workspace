@@ -72,8 +72,12 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "markdownEditor.shortcuts.group.media": "Медиа",
         "markdownEditor.upload.uploading": "Загрузка изображения…",
         "markdownEditor.upload.failed": "Не удалось загрузить {fileName}.",
+        "markdownEditor.upload.unsupported": ("Неподдерживаемый формат изображения: {fileName}."),
         "markdownEditor.upload.retry": "Повторить",
         "markdownEditor.upload.dismiss": "Закрыть",
+        "markdownEditor.preview.imageFailed": (
+            "Не удалось загрузить изображение для предпросмотра."
+        ),
         "markdownEditor.completions": "Варианты автодополнения",
         "markdownEditor.wikiLinks.registryUnavailable": (
             "Не удалось загрузить варианты wiki-ссылок. Ручной ввод по-прежнему доступен."
@@ -719,8 +723,10 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "markdownEditor.shortcuts.group.media": "Media",
         "markdownEditor.upload.uploading": "Uploading image…",
         "markdownEditor.upload.failed": "Could not upload {fileName}.",
+        "markdownEditor.upload.unsupported": "Unsupported image format: {fileName}.",
         "markdownEditor.upload.retry": "Retry",
         "markdownEditor.upload.dismiss": "Dismiss",
+        "markdownEditor.preview.imageFailed": "Could not load the preview image.",
         "markdownEditor.completions": "Completions",
         "markdownEditor.wikiLinks.registryUnavailable": (
             "Wiki-link suggestions could not be loaded. Manual entry is still available."

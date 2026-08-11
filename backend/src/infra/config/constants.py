@@ -92,10 +92,12 @@ class KnowledgeFilesConstants:
     mime_type_max_length: int = 255
     photo_max_width_px: int = 2048
     photo_max_height_px: int = 2048
+    photo_max_source_pixels: int = 4096 * 4096
     photo_webp_quality: int = 82
     photo_webp_method: int = 6
     stream_chunk_size_bytes: int = 64 * 1024
     attachment_folder: str = "attachments"
+    editor_image_folder: str = "editor-images"
     person_photo_folder: str = "person-photos"
     content_disposition_header_name: Literal["Content-Disposition"] = "Content-Disposition"
     content_type_options_header_name: Literal["X-Content-Type-Options"] = "X-Content-Type-Options"

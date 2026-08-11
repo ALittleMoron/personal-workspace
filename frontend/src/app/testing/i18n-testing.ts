@@ -36,8 +36,10 @@ const I18N_TEST_MESSAGES: Record<string, string> = {
   'markdownEditor.shortcuts.group.media': 'Медиа',
   'markdownEditor.upload.uploading': 'Загрузка изображения…',
   'markdownEditor.upload.failed': 'Не удалось загрузить {fileName}.',
+  'markdownEditor.upload.unsupported': 'Неподдерживаемый формат изображения: {fileName}.',
   'markdownEditor.upload.retry': 'Повторить',
   'markdownEditor.upload.dismiss': 'Закрыть',
+  'markdownEditor.preview.imageFailed': 'Не удалось загрузить изображение для предпросмотра.',
   'markdownEditor.completions': 'Варианты автодополнения',
   'markdownEditor.wikiLinks.registryUnavailable':
     'Не удалось загрузить варианты wiki-ссылок. Ручной ввод по-прежнему доступен.',

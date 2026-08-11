@@ -11,6 +11,7 @@ from core.knowledge.files.clients import (
     KnowledgeFileObjectCleaner,
     KnowledgeFileRollbackRegistrar,
 )
+from core.knowledge.files.enums import KnowledgeFileProcessing
 from core.knowledge.files.use_cases import KnowledgeFilesUseCase
 from entrypoints.litestar.api.knowledge.files.post_commit import (
     register_knowledge_object_cleanup,
@@ -20,6 +21,7 @@ from entrypoints.litestar.api.knowledge.files.responses import (
 )
 from entrypoints.litestar.api.knowledge.files.schemas import (
     KnowledgeAttachmentUploadRequestSchema,
+    KnowledgeEditorImageUploadRequestSchema,
     KnowledgeFileResponseSchema,
     KnowledgeFileUpdateRequestSchema,
     KnowledgePhotoUploadRequestSchema,
@@ -145,6 +147,43 @@ class AdminKnowledgeFilesApiController(Controller):
                 item_id=item_id,
                 author_username=request.user.username,
             ),
+            processing=KnowledgeFileProcessing.RAW,
+            rollback_registrar=rollback_registrar,
+            current_datetime=current_datetime,
+        )
+        return KnowledgeFileResponseSchema.from_domain_schema(schema=file)
+
+    @post(
+        "/items/{item_id:str}/editor-images",
+        description="Upload a normalized private image for the knowledge Markdown editor.",
+        name="admin-knowledge-editor-image-upload-api-handler",
+        status_code=status_codes.HTTP_201_CREATED,
+        request_max_body_size=constants.knowledge_files.photo_request_max_body_size_bytes,
+    )
+    async def upload_editor_image(  # noqa: PLR0913
+        self,
+        item_id: KnowledgeItemIdPath,
+        data: Annotated[
+            KnowledgeEditorImageUploadRequestSchema,
+            api_multipart_body(
+                title="Knowledge editor image upload",
+                description="JPEG, PNG, or WebP private Markdown image.",
+                examples=({"file": "diagram.png"},),
+            ),
+        ],
+        request: Request,
+        use_case: FromDishka[KnowledgeFilesUseCase],
+        id_generator: FromDishka[HexUuidIdGenerator],
+        rollback_registrar: FromDishka[KnowledgeFileRollbackRegistrar],
+        current_datetime: FromDishka[datetime],
+    ) -> KnowledgeFileResponseSchema:
+        file = await use_case.upload_attachment(
+            params=await data.to_domain_schema(
+                file_id=id_generator.get_next(),
+                item_id=item_id,
+                author_username=request.user.username,
+            ),
+            processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
             rollback_registrar=rollback_registrar,
             current_datetime=current_datetime,
         )

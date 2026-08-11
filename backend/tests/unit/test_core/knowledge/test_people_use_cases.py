@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -12,6 +12,9 @@ from core.knowledge.exceptions import (
     PersonRelationshipNotFoundError,
     PersonRelationshipTypeNotFoundError,
 )
+from core.knowledge.files.enums import KnowledgeFileKind, KnowledgeFileProcessing
+from core.knowledge.files.schemas import KnowledgeFile
+from core.knowledge.files.services import KnowledgeFileCrudService
 from core.knowledge.files.storages import KnowledgeFilesStorage
 from core.knowledge.items.enums import KnowledgeItemKind
 from core.knowledge.items.schemas import (
@@ -154,6 +157,7 @@ class TestPeopleUseCase(TestCase):
         self.dates_storage = Mock(spec=KnowledgeDatesStorage)
         self.dates_storage.list_date_ids_for_person.return_value = []
         self.file_storage = Mock(spec=KnowledgeFilesStorage)
+        self.file_service = Mock(spec=KnowledgeFileCrudService)
         self.file_storage.list_files_for_items.return_value = []
         self.file_storage.list_item_files.return_value = []
         self.use_case = PeopleUseCase(
@@ -162,6 +166,7 @@ class TestPeopleUseCase(TestCase):
             people_storage=self.people_storage,
             dates_storage=self.dates_storage,
             file_storage=self.file_storage,
+            file_service=self.file_service,
         )
 
     async def test_get_person_projects_related_dates_in_calendar_order(self) -> None:
@@ -377,6 +382,87 @@ class TestPeopleUseCase(TestCase):
         assert {
             call.kwargs["updated_at"] for call in self.item_storage.touch_items.await_args_list
         } == {CURRENT_DATETIME}
+
+    async def test_delete_person_removes_file_metadata_before_item_and_returns_object_path(
+        self,
+    ) -> None:
+        person_id = self.factory.core.hex_id(1)
+        file = KnowledgeFile(
+            id=self.factory.core.hex_id(2),
+            item_id=person_id,
+            author_username="owner",
+            kind=KnowledgeFileKind.PERSON_PHOTO,
+            processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
+            relative_path="person-photos/photo.webp",
+            mime_type="image/webp",
+            size_bytes=10,
+            name="Photo",
+            original_name="photo.png",
+            original_sha256="a" * 64,
+            created_at=CURRENT_DATETIME,
+            updated_at=CURRENT_DATETIME,
+        )
+        self.item_service.get_item.return_value = knowledge_item(
+            item_id=person_id,
+            display_name="Иванов Иван",
+        )
+        self.people_storage.list_related_person_ids.return_value = set()
+        self.dates_storage.list_date_ids_for_person.return_value = []
+        self.file_storage.list_item_files.return_value = [file]
+        self.file_service.delete_files.return_value = (file.relative_path,)
+        mutations = Mock()
+        mutations.attach_mock(self.file_service.delete_files, "delete_files")
+        mutations.attach_mock(self.item_service.delete_item, "delete_item")
+
+        object_names = await self.use_case.delete_person(
+            person_id=person_id,
+            author_username="owner",
+            current_datetime=CURRENT_DATETIME,
+        )
+
+        assert object_names == ("person-photos/photo.webp",)
+        assert mutations.method_calls == [
+            call.delete_files(files=[file]),
+            call.delete_item(
+                item_id=person_id,
+                author_username="owner",
+                kind=KnowledgeItemKind.PERSON,
+            ),
+        ]
+
+    async def test_delete_person_omits_cleanup_path_when_file_stays_in_use(self) -> None:
+        person_id = self.factory.core.hex_id(1)
+        file = KnowledgeFile(
+            id=self.factory.core.hex_id(2),
+            item_id=person_id,
+            author_username="owner",
+            kind=KnowledgeFileKind.PERSON_PHOTO,
+            processing=KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE,
+            relative_path="person-photos/photo.webp",
+            mime_type="image/webp",
+            size_bytes=10,
+            name="Photo",
+            original_name="photo.png",
+            original_sha256="a" * 64,
+            created_at=CURRENT_DATETIME,
+            updated_at=CURRENT_DATETIME,
+        )
+        self.item_service.get_item.return_value = knowledge_item(
+            item_id=person_id,
+            display_name="Иванов Иван",
+        )
+        self.people_storage.list_related_person_ids.return_value = set()
+        self.dates_storage.list_date_ids_for_person.return_value = []
+        self.file_storage.list_item_files.return_value = [file]
+        self.file_service.delete_files.return_value = ()
+
+        object_names = await self.use_case.delete_person(
+            person_id=person_id,
+            author_username="owner",
+            current_datetime=CURRENT_DATETIME,
+        )
+
+        assert object_names == ()
 
     async def test_validate_relationship_changes_rejects_self_link(self) -> None:
         person_id = self.factory.core.hex_id(1)

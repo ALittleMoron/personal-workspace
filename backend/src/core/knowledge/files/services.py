@@ -4,16 +4,17 @@ from datetime import datetime
 
 from core.files.exceptions import FileSizeTooLargeError
 from core.files.file_name_generators import FileNameGenerator
+from core.files.storages import FileStorage
 from core.knowledge.files.clients import (
     KnowledgeFileClient,
     KnowledgeFileRollbackRegistrar,
     KnowledgePhotoProcessor,
 )
-from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.files.enums import KnowledgeFileProcessing
 from core.knowledge.files.schemas import (
     KnowledgeFile,
     KnowledgeFileContent,
-    KnowledgeFileRules,
+    KnowledgeFileServiceConfig,
     KnowledgeFileUpdateParams,
     KnowledgeFileUploadParams,
 )
@@ -23,23 +24,30 @@ from core.knowledge.files.storages import KnowledgeFilesStorage
 @dataclass(kw_only=True, slots=True, frozen=True)
 class KnowledgeFileCrudService:
     storage: KnowledgeFilesStorage
+    shared_file_storage: FileStorage
     client: KnowledgeFileClient
     photo_processor: KnowledgePhotoProcessor
     file_name_generator: FileNameGenerator
-    config: KnowledgeFileRules
+    config: KnowledgeFileServiceConfig
 
     async def create_file(
         self,
         *,
         params: KnowledgeFileUploadParams,
+        processing: KnowledgeFileProcessing,
         now: datetime,
         rollback_registrar: KnowledgeFileRollbackRegistrar,
     ) -> KnowledgeFile:
-        rule = self.config.require(kind=params.kind)
+        rules = (
+            self.config.normalized_raster_image_rules
+            if processing == KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE
+            else self.config.rules
+        )
+        rule = rules.require(kind=params.kind)
         params.validate(rule=rule)
         content = params.content
         mime_type = params.mime_type
-        if params.kind == KnowledgeFileKind.PERSON_PHOTO:
+        if processing == KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE:
             processed = self.photo_processor.process(params=params)
             content = processed.content
             mime_type = processed.mime_type
@@ -51,7 +59,9 @@ class KnowledgeFileCrudService:
         relative_path = self.file_name_generator(
             folder=rule.folder,
             file_extension=(
-                ".webp" if params.kind == KnowledgeFileKind.PERSON_PHOTO else params.file_extension
+                ".webp"
+                if processing == KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE
+                else params.file_extension
             ),
         )
         file = KnowledgeFile(
@@ -59,6 +69,7 @@ class KnowledgeFileCrudService:
             item_id=params.item_id,
             author_username=params.author_username,
             kind=params.kind,
+            processing=processing,
             relative_path=relative_path,
             mime_type=mime_type,
             size_bytes=len(content),
@@ -101,6 +112,27 @@ class KnowledgeFileCrudService:
             updated_at=updated_at,
         )
 
-    async def delete_file(self, *, file: KnowledgeFile) -> KnowledgeFile:
+    async def delete_file(self, *, file: KnowledgeFile) -> KnowledgeFile | None:
+        await self.shared_file_storage.lock_files(
+            namespace=self.config.namespace,
+            file_ids=frozenset({file.id}),
+        )
         await self.storage.delete_file(file=file)
+        if await self.shared_file_storage.file_has_usages(
+            namespace=self.config.namespace,
+            file_id=file.id,
+        ):
+            return None
+        await self.shared_file_storage.delete_file(
+            namespace=self.config.namespace,
+            file_id=file.id,
+        )
         return file
+
+    async def delete_files(self, *, files: list[KnowledgeFile]) -> tuple[str, ...]:
+        object_names: list[str] = []
+        for file in files:
+            deleted = await self.delete_file(file=file)
+            if deleted is not None:
+                object_names.append(deleted.relative_path)
+        return tuple(object_names)

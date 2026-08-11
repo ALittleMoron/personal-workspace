@@ -1,8 +1,9 @@
 from datetime import datetime
-from typing import Self
+from typing import Self, cast
 
-from sqlalchemy import Enum, Index, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, Enum, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy_dev_utils.mixins.audit import AuditMixin
 from sqlalchemy_dev_utils.types.datetime import UTCDateTime
 
@@ -11,6 +12,8 @@ from core.files.schemas import StoredFile
 from core.files.types import Namespace
 from infra.postgresql.models.base import BaseModel, TableArgs
 from infra.postgresql.models.mixins.ids import HexUuidIDMixin
+
+SHA256_HEX_LENGTH = 64
 
 
 class FileModel(HexUuidIDMixin, AuditMixin, BaseModel):
@@ -60,6 +63,28 @@ class FileModel(HexUuidIDMixin, AuditMixin, BaseModel):
     @classmethod
     def __table_args__(cls) -> TableArgs:
         return (
+            CheckConstraint(
+                cls.size_bytes >= 0,
+                name="files_file_size_non_negative_check",
+            ),
+            CheckConstraint(
+                func.char_length(func.trim(cls.name)) > 0,
+                name="files_file_name_trimmed_nonblank_check",
+            ),
+            CheckConstraint(
+                func.char_length(func.trim(cls.original_name)) > 0,
+                name="files_file_original_name_trimmed_nonblank_check",
+            ),
+            CheckConstraint(
+                cls.original_sha256.is_(None)
+                | (
+                    func.char_length(
+                        cast("ColumnElement[str]", cls.original_sha256),
+                    )
+                    == SHA256_HEX_LENGTH
+                ),
+                name="files_file_original_sha256_length_check",
+            ),
             UniqueConstraint(
                 cls.namespace,
                 cls.relative_path,

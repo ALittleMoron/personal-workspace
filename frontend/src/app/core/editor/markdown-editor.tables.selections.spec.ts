@@ -103,6 +103,55 @@ describe('Markdown table mixed-selection rendering', () => {
     },
   );
 
+  it('protects a reverse complete body line beyond the initial parser viewport', () => {
+    const source = `${'ordinary preface line\n'.repeat(200)}${MIXED_SOURCE}`;
+    const body = sourceLine(source, '| A1');
+    const selection = EditorSelection.range(body.to, body.from);
+    const view = createProductionLikeView(source, views);
+    view.dispatch({ selection, userEvent: 'select' });
+
+    for (const keyValue of ['Backspace', 'Delete'] as const) {
+      const event = key(view, keyValue);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(view.state.doc.toString()).toBe(source);
+      expect(view.state.selection.main).toEqual(selection);
+    }
+  });
+
+  it('fails closed for a candidate table when no syntax tree is available', () => {
+    const body = sourceLine(MIXED_SOURCE, '| A1');
+    const selection = EditorSelection.range(body.to, body.from);
+    const parent = document.createElement('div');
+    parent.className = 'markdown-editor-shell';
+    document.body.append(parent);
+    const view = new EditorView({
+      parent,
+      state: EditorState.create({
+        doc: MIXED_SOURCE,
+        extensions: [markdownTableEditor(config), keymap.of(defaultKeymap)],
+      }),
+    });
+    views.push(view);
+    view.focus();
+    view.dispatch({ selection, userEvent: 'select' });
+
+    const event = key(view, 'Backspace');
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(view.state.doc.toString()).toBe(MIXED_SOURCE);
+    expect(view.state.selection.main).toEqual(selection);
+
+    const ordinaryFrom = requiredIndex(MIXED_SOURCE, 'after alpha');
+    view.dispatch({
+      selection: EditorSelection.range(ordinaryFrom, ordinaryFrom + 5),
+      userEvent: 'select',
+    });
+
+    expect(key(view, 'Backspace').defaultPrevented).toBe(true);
+    expect(view.state.doc.toString()).not.toBe(MIXED_SOURCE);
+  });
+
   it.each(selectionCases.filter(({ touchesTable }) => !touchesTable))(
     'leaves ordinary editing behavior available for $name',
     ({ anchor, head }) => {

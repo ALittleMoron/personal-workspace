@@ -8,15 +8,15 @@ from core.files.types import Namespace
 
 class FileStorage(ABC):
     @abstractmethod
-    async def create_file(self, *, file: StoredFile) -> StoredFile:
+    async def create_file(self, *, namespace: Namespace, file: StoredFile) -> StoredFile:
         raise NotImplementedError
 
     @abstractmethod
-    async def get_file(self, *, file_id: str) -> StoredFile:
+    async def get_file(self, *, namespace: Namespace, file_id: str) -> StoredFile:
         raise NotImplementedError
 
     @abstractmethod
-    async def list_files(self, *, purpose: FilePurpose) -> StoredFiles:
+    async def list_files(self, *, namespace: Namespace, purpose: FilePurpose) -> StoredFiles:
         raise NotImplementedError
 
     @abstractmethod
@@ -33,6 +33,7 @@ class FileStorage(ABC):
     async def refresh_file_orphaned_at(
         self,
         *,
+        namespace: Namespace,
         file_id: str,
         orphaned_at: datetime,
     ) -> StoredFile:
@@ -42,6 +43,7 @@ class FileStorage(ABC):
     async def update_file_name(
         self,
         *,
+        namespace: Namespace,
         file_id: str,
         name: str,
         updated_at: datetime,
@@ -49,21 +51,27 @@ class FileStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def file_has_usages(self, *, file_id: str) -> bool:
+    async def file_has_usages(self, *, namespace: Namespace, file_id: str) -> bool:
         raise NotImplementedError
 
     @abstractmethod
-    async def lock_files(self, *, file_ids: frozenset[str]) -> None:
+    async def lock_files(self, *, namespace: Namespace, file_ids: frozenset[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def set_files_attached(self, *, file_ids: frozenset[str]) -> None:
+    async def set_files_attached(
+        self,
+        *,
+        namespace: Namespace,
+        file_ids: frozenset[str],
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod
     async def set_files_orphaned_if_unused(
         self,
         *,
+        namespace: Namespace,
         file_ids: frozenset[str],
         orphaned_at: datetime,
     ) -> None:
@@ -80,5 +88,5 @@ class FileStorage(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_file(self, *, file_id: str) -> None:
+    async def delete_file(self, *, namespace: Namespace, file_id: str) -> None:
         raise NotImplementedError

@@ -11,7 +11,10 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MarkdownEditorComponent } from '../../../../../../core/editor/markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  MarkdownEditorImageCapability,
+} from '../../../../../../core/editor/markdown-editor.component';
 import { I18nService } from '../../../../../../core/i18n/i18n.service';
 import { TranslatePipe } from '../../../../../../core/i18n/translate.pipe';
 import { ApiError } from '../../../../../../core/models/api-error.model';
@@ -36,7 +39,7 @@ import {
   trimRequired,
   validationMessage,
 } from '../../../../utils/admin-validation';
-import { KnowledgeFile, KnowledgeTag, PersonSummary } from '../../../people/models/people.model';
+import { KnowledgeTag, PersonSummary } from '../../../people/models/people.model';
 import { PeopleService } from '../../../people/services/people.service';
 import { annualDateValidator } from '../../../shared/annual-date';
 import { formatFileSize } from '../../../shared/file-size';
@@ -46,6 +49,8 @@ import {
   RelatedPerson,
 } from '../../models/dates.model';
 import { KnowledgeDatesService } from '../../services/dates.service';
+import { KnowledgeEditorImagesService } from '../../../shared/knowledge-editor-images.service';
+import { KnowledgeFile } from '../../../shared/knowledge-file.model';
 
 interface DateFormValue {
   displayName: string;
@@ -78,6 +83,7 @@ const RELATED_PEOPLE_PREVIEW_LIMIT = 10;
 })
 export class DateDetailComponent implements OnInit {
   private readonly datesService = inject(KnowledgeDatesService);
+  private readonly knowledgeEditorImages = inject(KnowledgeEditorImagesService);
   private readonly peopleService = inject(PeopleService);
   private readonly notifications = inject(NotificationService);
   private readonly i18n = inject(I18nService);
@@ -104,6 +110,7 @@ export class DateDetailComponent implements OnInit {
   readonly personCandidates = signal<readonly PersonSummary[]>([]);
   readonly attachmentUploading = signal(false);
   readonly attachmentError = signal<string | null>(null);
+  readonly editorImagePending = signal(false);
   readonly formSnapshot = signal<DateFormValue>(emptyDateFormValue());
   readonly relatedPeopleExpanded = signal(false);
   readonly peopleSearchQuery = signal('');
@@ -115,6 +122,8 @@ export class DateDetailComponent implements OnInit {
   readonly tagDraft = signal('');
   readonly tagEditingId = signal<string | null>(null);
   readonly tagSubmitting = signal(false);
+  readonly editorImageCapability = signal<MarkdownEditorImageCapability | null>(null);
+  readonly imagePreviewRevision = signal(0);
 
   readonly dateForm = this.formBuilder.group({
     displayName: ['', [trimRequired, Validators.maxLength(ADMIN_VALIDATION_LIMITS.shortText)]],
@@ -190,6 +199,15 @@ export class DateDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.dateId = this.route.snapshot.paramMap.get('id') ?? '';
+    if (this.dateId !== '') {
+      this.editorImageCapability.set(
+        this.knowledgeEditorImages.bind({
+          itemId: this.dateId,
+          attachments: () => this.date()?.attachments ?? [],
+          uploaded: (file) => this.addEditorImageAttachment(file),
+        }),
+      );
+    }
     this.loadDate();
     this.loadTags();
   }
@@ -203,6 +221,7 @@ export class DateDetailComponent implements OnInit {
       .subscribe({
         next: (value) => {
           this.date.set(value);
+          this.refreshImagePreview();
           this.patchDate(value);
           this.loading.set(false);
         },
@@ -309,6 +328,9 @@ export class DateDetailComponent implements OnInit {
   }
 
   saveDate(): void {
+    if (this.editorImagePending() || this.saving()) {
+      return;
+    }
     this.submitted.set(true);
     this.dateForm.markAllAsTouched();
     if (this.dateForm.invalid) {
@@ -322,6 +344,7 @@ export class DateDetailComponent implements OnInit {
       .subscribe({
         next: (value) => {
           this.date.set(value);
+          this.refreshImagePreview();
           this.patchDate(value);
           this.saving.set(false);
           this.submitted.set(false);
@@ -526,6 +549,7 @@ export class DateDetailComponent implements OnInit {
           this.date.update((value) =>
             value === null ? null : { ...value, attachments: [...value.attachments, attachment] },
           );
+          this.refreshImagePreview();
           this.notifications.success(this.i18n.translate('knowledgeDates.attachmentSaveSuccess'));
         },
         error: () => {
@@ -559,6 +583,7 @@ export class DateDetailComponent implements OnInit {
                   ),
                 },
           );
+          this.refreshImagePreview();
           this.notifications.success(this.i18n.translate('knowledgeDates.attachmentRenameSuccess'));
         },
         error: () =>
@@ -591,6 +616,7 @@ export class DateDetailComponent implements OnInit {
                   attachments: value.attachments.filter((file) => file.id !== attachment.id),
                 },
           );
+          this.refreshImagePreview();
           this.notifications.success(this.i18n.translate('knowledgeDates.attachmentDeleteSuccess'));
         },
         error: () =>
@@ -622,6 +648,24 @@ export class DateDetailComponent implements OnInit {
         error: () =>
           this.notifications.error(this.i18n.translate('knowledgeDates.attachmentDownloadError')),
       });
+  }
+
+  private addEditorImageAttachment(attachment: KnowledgeFile): void {
+    let added = false;
+    this.date.update((value) => {
+      if (value === null || value.attachments.some((file) => file.id === attachment.id)) {
+        return value;
+      }
+      added = true;
+      return { ...value, attachments: [...value.attachments, attachment] };
+    });
+    if (added) {
+      this.refreshImagePreview();
+    }
+  }
+
+  private refreshImagePreview(): void {
+    this.imagePreviewRevision.update((revision) => revision + 1);
   }
 
   nameInvalid(): boolean {

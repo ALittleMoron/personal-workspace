@@ -102,7 +102,14 @@
                 [attr.data-markdown-command]="command.id"
                 [attr.aria-label]="toolbarCommandLabel(command)"
                 [attr.title]="toolbarCommandLabel(command)"
-                [tabindex]="firstGroup && firstCommand ? 0 : -1"
+                [disabled]="command.id === 'image' && uploadInteractionsDisabled()"
+                [tabindex]="
+                  command.id === 'image' && uploadInteractionsDisabled()
+                    ? -1
+                    : firstGroup && firstCommand
+                      ? 0
+                      : -1
+                "
                 (click)="executeToolbarCommand(command)"
                 (keydown)="onToolbarKeydown($event)"
               >
@@ -166,7 +173,8 @@
       #imageInput
       class="visually-hidden"
       type="file"
-      accept="image/*"
+      [accept]="acceptedImageMimeTypes()"
+      [disabled]="uploadInteractionsDisabled()"
       multiple
       tabindex="-1"
       (change)="onImageInput($event)"
@@ -196,6 +204,7 @@
             type="button"
             class="btn btn-sm btn-outline-primary"
             data-testid="markdown-editor-upload-retry"
+            [disabled]="uploadInteractionsDisabled()"
             (click)="retryUpload(upload.id)"
           >
             {{ 'markdownEditor.upload.retry' | t }}
@@ -207,6 +216,42 @@
             (click)="dismissUpload(upload.id)"
           >
             {{ 'markdownEditor.upload.dismiss' | t }}
+          </button>
+        </div>
+      }
+      @for (image of unsupportedImages(); track image.id) {
+        <div
+          class="markdown-editor-upload-error"
+          data-testid="markdown-editor-unsupported-image"
+          role="alert"
+        >
+          <span>
+            {{ 'markdownEditor.upload.unsupported' | t: { fileName: image.file.name } }}
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary"
+            data-testid="markdown-editor-unsupported-dismiss"
+            (click)="dismissUnsupportedImage(image.id)"
+          >
+            {{ 'markdownEditor.upload.dismiss' | t }}
+          </button>
+        </div>
+      }
+      @for (error of previewImageErrors(); track error.index) {
+        <div
+          class="markdown-editor-upload-error"
+          data-testid="markdown-editor-preview-image-error"
+          role="alert"
+        >
+          <span>{{ 'markdownEditor.preview.imageFailed' | t }}</span>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            data-testid="markdown-editor-preview-image-retry"
+            (click)="retryPreviewImage(error.index)"
+          >
+            {{ 'markdownEditor.upload.retry' | t }}
           </button>
         </div>
       }

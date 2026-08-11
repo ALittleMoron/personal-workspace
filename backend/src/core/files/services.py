@@ -51,6 +51,7 @@ class FileService:
         if duplicate is not None:
             if duplicate.orphaned_at is not None:
                 duplicate = await self.file_storage.refresh_file_orphaned_at(
+                    namespace=self.config.namespace,
                     file_id=duplicate.id,
                     orphaned_at=current_datetime,
                 )
@@ -76,7 +77,10 @@ class FileService:
             created_at=current_datetime,
             updated_at=current_datetime,
         )
-        file = await self.file_storage.create_file(file=file)
+        file = await self.file_storage.create_file(
+            namespace=self.config.namespace,
+            file=file,
+        )
         await self.file_client.upload_file(
             file_data=BytesIO(upload_params.content),
             object_name=relative_path,
@@ -86,10 +90,18 @@ class FileService:
         return self._to_read(file=file)
 
     async def get_file(self, *, file_id: str) -> FileRead:
-        return self._to_read(file=await self.file_storage.get_file(file_id=file_id))
+        return self._to_read(
+            file=await self.file_storage.get_file(
+                namespace=self.config.namespace,
+                file_id=file_id,
+            ),
+        )
 
     async def list_files(self, *, purpose: FilePurpose) -> list[FileRead]:
-        files = await self.file_storage.list_files(purpose=purpose)
+        files = await self.file_storage.list_files(
+            namespace=self.config.namespace,
+            purpose=purpose,
+        )
         return [self._to_read(file=file) for file in files]
 
     async def update_file(
@@ -102,6 +114,7 @@ class FileService:
         params.validate_name()
         return self._to_read(
             file=await self.file_storage.update_file_name(
+                namespace=self.config.namespace,
                 file_id=file_id,
                 name=params.name,
                 updated_at=current_datetime,
@@ -115,24 +128,42 @@ class FileService:
         purpose: FilePurpose,
     ) -> None:
         for file_id in sorted(file_ids):
-            file = await self.file_storage.get_file(file_id=file_id)
+            file = await self.file_storage.get_file(
+                namespace=self.config.namespace,
+                file_id=file_id,
+            )
             if file.purpose != purpose:
                 raise FilePurposeNotAllowedError
 
     async def delete_file(self, *, file_id: str) -> None:
-        await self.file_storage.lock_files(file_ids=frozenset({file_id}))
-        if await self.file_storage.file_has_usages(file_id=file_id):
+        await self.file_storage.lock_files(
+            namespace=self.config.namespace,
+            file_ids=frozenset({file_id}),
+        )
+        if await self.file_storage.file_has_usages(
+            namespace=self.config.namespace,
+            file_id=file_id,
+        ):
             raise FileInUseError
-        file = await self.file_storage.get_file(file_id=file_id)
+        file = await self.file_storage.get_file(
+            namespace=self.config.namespace,
+            file_id=file_id,
+        )
         await self.file_client.delete_file(
             object_name=file.relative_path,
             namespace=file.namespace,
         )
-        await self.file_storage.delete_file(file_id=file_id)
+        await self.file_storage.delete_file(
+            namespace=self.config.namespace,
+            file_id=file_id,
+        )
 
     async def lock_file_usage_transitions(self, *, file_ids: frozenset[str]) -> None:
         if file_ids:
-            await self.file_storage.lock_files(file_ids=file_ids)
+            await self.file_storage.lock_files(
+                namespace=self.config.namespace,
+                file_ids=file_ids,
+            )
 
     async def sync_file_usages(
         self,
@@ -143,11 +174,18 @@ class FileService:
     ) -> None:
         transitioned_file_ids = attached_file_ids | detached_file_ids
         if transitioned_file_ids:
-            await self.file_storage.lock_files(file_ids=transitioned_file_ids)
+            await self.file_storage.lock_files(
+                namespace=self.config.namespace,
+                file_ids=transitioned_file_ids,
+            )
         if attached_file_ids:
-            await self.file_storage.set_files_attached(file_ids=attached_file_ids)
+            await self.file_storage.set_files_attached(
+                namespace=self.config.namespace,
+                file_ids=attached_file_ids,
+            )
         if detached_file_ids:
             await self.file_storage.set_files_orphaned_if_unused(
+                namespace=self.config.namespace,
                 file_ids=detached_file_ids,
                 orphaned_at=orphaned_at,
             )
@@ -180,8 +218,14 @@ class FileOrphanCleanupService:
         failed_count = 0
         skipped_in_use_count = 0
         for file in candidates:
-            if await self.file_storage.file_has_usages(file_id=file.id):
-                await self.file_storage.set_files_attached(file_ids=frozenset({file.id}))
+            if await self.file_storage.file_has_usages(
+                namespace=self.config.namespace,
+                file_id=file.id,
+            ):
+                await self.file_storage.set_files_attached(
+                    namespace=self.config.namespace,
+                    file_ids=frozenset({file.id}),
+                )
                 skipped_in_use_count += 1
                 continue
             try:
@@ -192,7 +236,10 @@ class FileOrphanCleanupService:
             except FileClientInternalError:
                 failed_count += 1
                 continue
-            await self.file_storage.delete_file(file_id=file.id)
+            await self.file_storage.delete_file(
+                namespace=self.config.namespace,
+                file_id=file.id,
+            )
             deleted_count += 1
         return FileOrphanCleanupResult(
             scanned_count=len(candidates.values),

@@ -3,11 +3,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, Router, provideRouter } from '@angular/router';
 import { of, Subject } from 'rxjs';
-import { MarkdownEditorComponent } from '../../../../../../core/editor/markdown-editor.component';
+import {
+  MarkdownEditorComponent,
+  MarkdownEditorImageCapability,
+} from '../../../../../../core/editor/markdown-editor.component';
 import { NotificationService } from '../../../../../../core/notifications/notification.service';
 import { provideI18nTesting } from '../../../../../../testing/i18n-testing';
 import { PersonDetail } from '../../models/people.model';
 import { PeopleService } from '../../services/people.service';
+import { KnowledgeEditorImagesService } from '../../../shared/knowledge-editor-images.service';
 import { PersonDetailComponent } from './person-detail.component';
 
 const PERSON: PersonDetail = {
@@ -40,6 +44,7 @@ describe('PersonDetailComponent', () => {
   let fixture: ComponentFixture<PersonDetailComponent>;
   let peopleService: Record<string, jest.Mock>;
   let notifications: { success: jest.Mock; error: jest.Mock };
+  let knowledgeEditorImages: { bind: jest.Mock };
   let router: Router;
 
   beforeEach(async () => {
@@ -64,6 +69,36 @@ describe('PersonDetailComponent', () => {
       deleteRelationshipType: jest.fn(),
     };
     notifications = { success: jest.fn(), error: jest.fn() };
+    knowledgeEditorImages = {
+      bind: jest.fn(
+        (binding: {
+          uploaded: (file: PersonDetail['attachments'][number]) => void;
+        }): MarkdownEditorImageCapability => ({
+          acceptedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          upload: (file) => {
+            const uploaded = {
+              id: 'editor-image-1',
+              itemId: 'person-1',
+              kind: 'attachment' as const,
+              processing: 'normalizedRasterImage' as const,
+              mimeType: 'image/webp',
+              sizeBytes: 7,
+              name: file.name,
+              originalName: file.name,
+              contentPath: '/api/admin/knowledge/files/editor-image-1/content',
+              createdAt: PERSON.createdAt,
+              updatedAt: PERSON.updatedAt,
+            };
+            binding.uploaded(uploaded);
+            return of({
+              markdownUrl:
+                '/api/admin/knowledge/files/editor-image-1/content#fileId=editor-image-1',
+            });
+          },
+          loadPreview: () => of(new Blob(['private'], { type: 'image/webp' })),
+        }),
+      ),
+    };
 
     await TestBed.configureTestingModule({
       imports: [PersonDetailComponent],
@@ -77,6 +112,7 @@ describe('PersonDetailComponent', () => {
           },
         },
         { provide: PeopleService, useValue: peopleService },
+        { provide: KnowledgeEditorImagesService, useValue: knowledgeEditorImages },
         { provide: NotificationService, useValue: notifications },
       ],
     })
@@ -93,7 +129,7 @@ describe('PersonDetailComponent', () => {
 
   afterEach(() => fixture.destroy());
 
-  it('loads a yearless leap-day birthday and disables People image uploads', () => {
+  it('loads a yearless leap-day birthday and binds People image uploads', () => {
     expect(fixture.componentInstance.personForm.controls.birthday.getRawValue()).toEqual({
       day: '29',
       month: '2',
@@ -101,7 +137,108 @@ describe('PersonDetailComponent', () => {
     });
     const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
       .componentInstance as MarkdownEditorStubComponent;
-    expect(editor.imageUploadsEnabled()).toBe(false);
+    expect(editor.imageCapability()).not.toBeNull();
+  });
+
+  it('keeps an uploaded editor image as an ordinary attachment after its Markdown is removed', () => {
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
+      .componentInstance as MarkdownEditorStubComponent;
+    const capability = editor.imageCapability();
+    fixture.componentInstance.setDescription('Unsaved before upload');
+
+    capability?.upload(new File(['image'], 'private.png', { type: 'image/png' })).subscribe();
+    editor.valueChange.emit('');
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.person()?.attachments).toContainEqual(
+      expect.objectContaining({ id: 'editor-image-1', processing: 'normalizedRasterImage' }),
+    );
+    expect(fixture.componentInstance.personForm.controls.description.value).toBe('');
+    expect(peopleService.deleteAttachment).not.toHaveBeenCalled();
+  });
+
+  it('blocks Save until attachment-first image completion has inserted Markdown', () => {
+    const saveResponse = new Subject<PersonDetail>();
+    peopleService['updatePerson'].mockReturnValue(saveResponse);
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
+      .componentInstance as MarkdownEditorStubComponent;
+    const binding = knowledgeEditorImages.bind.mock.calls[0]![0] as {
+      uploaded: (file: PersonDetail['attachments'][number]) => void;
+    };
+    const uploaded = {
+      id: 'editor-image-race',
+      itemId: 'person-1',
+      kind: 'attachment' as const,
+      processing: 'normalizedRasterImage' as const,
+      mimeType: 'image/webp',
+      sizeBytes: 7,
+      name: 'race.png',
+      originalName: 'race.png',
+      contentPath: '/api/admin/knowledge/files/editor-image-race/content',
+      createdAt: PERSON.createdAt,
+      updatedAt: PERSON.updatedAt,
+    };
+    const markdown = `![race.png](${uploaded.contentPath}#fileId=${uploaded.id})`;
+    const attachmentCompletion = new Subject<void>();
+    const markdownCompletion = new Subject<string>();
+    attachmentCompletion.subscribe(() => binding.uploaded(uploaded));
+    markdownCompletion.subscribe((value) => editor.valueChange.emit(value));
+
+    editor.imageUploadPendingChange.emit(true);
+    fixture.detectChanges();
+    expect(
+      (
+        fixture.nativeElement.querySelector(
+          '[data-testid="person-detail-save"]',
+        ) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    fixture.componentInstance.savePerson();
+    expect(peopleService.updatePerson).not.toHaveBeenCalled();
+
+    attachmentCompletion.next();
+    expect(fixture.componentInstance.editorImagePending()).toBe(true);
+    markdownCompletion.next(markdown);
+    expect(fixture.componentInstance.editorImagePending()).toBe(true);
+    expect(peopleService.updatePerson).not.toHaveBeenCalled();
+
+    editor.imageUploadPendingChange.emit(false);
+    fixture.detectChanges();
+    const capabilityBeforeSave = editor.imageCapability();
+    fixture.componentInstance.savePerson();
+    fixture.detectChanges();
+
+    expect(peopleService.updatePerson).toHaveBeenCalledWith(
+      'person-1',
+      expect.objectContaining({ description: markdown }),
+    );
+    expect(editor.imageCapability()).toBe(capabilityBeforeSave);
+    expect(editor.uploadInteractionsDisabled()).toBe(true);
+
+    saveResponse.next({ ...PERSON, description: markdown, attachments: [uploaded] });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.personForm.controls.description.value).toBe(markdown);
+    expect(editor.uploadInteractionsDisabled()).toBe(false);
+  });
+
+  it('refreshes capability-backed preview state when a referenced attachment is deleted', () => {
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
+    peopleService.deleteAttachment.mockReturnValue(of(void 0));
+    const editor = fixture.debugElement.query(By.directive(MarkdownEditorStubComponent))
+      .componentInstance as MarkdownEditorStubComponent;
+    editor
+      .imageCapability()
+      ?.upload(new File(['image'], 'delete-me.png', { type: 'image/png' }))
+      .subscribe();
+    fixture.detectChanges();
+    const initialRevision = editor.imagePreviewRevision();
+    const attachment = fixture.componentInstance.person()!.attachments[0]!;
+
+    fixture.componentInstance.deleteAttachment(attachment);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.person()?.attachments).not.toContainEqual(attachment);
+    expect(editor.imagePreviewRevision()).toBe(initialRevision + 1);
   });
 
   it('renders read-only memorable-date backlinks with localized dates', () => {
@@ -339,6 +476,7 @@ describe('PersonDetailComponent', () => {
           id: 'photo-1',
           itemId: 'person-1',
           kind: 'personPhoto',
+          processing: 'normalizedRasterImage',
           mimeType: 'image/webp',
           sizeBytes: 10,
           name: 'photo.webp',
@@ -384,6 +522,9 @@ class MarkdownEditorStubComponent {
   readonly value = input.required<string>();
   readonly language = input.required<'ru' | 'en'>();
   readonly accessibleLabel = input.required<string>();
-  readonly imageUploadsEnabled = input.required<boolean>();
+  readonly imageCapability = input.required<MarkdownEditorImageCapability | null>();
+  readonly uploadInteractionsDisabled = input.required<boolean>();
+  readonly imagePreviewRevision = input.required<number>();
   readonly valueChange = output<string>();
+  readonly imageUploadPendingChange = output<boolean>();
 }

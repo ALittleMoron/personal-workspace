@@ -4,7 +4,7 @@ import {
   hasPrevSnippetField,
 } from '@codemirror/autocomplete';
 import { invertedEffects } from '@codemirror/commands';
-import { syntaxTree } from '@codemirror/language';
+import { ensureSyntaxTree, syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
 import {
   Annotation,
   EditorSelection,
@@ -38,7 +38,7 @@ import {
   type Tooltip,
   type ViewUpdate,
 } from '@codemirror/view';
-import type { SyntaxNode } from '@lezer/common';
+import type { SyntaxNode, Tree } from '@lezer/common';
 import {
   applyMarkdownTableGrid,
   classifyMarkdownTableSelection,
@@ -224,6 +224,7 @@ interface TableMenuItem {
 }
 
 const TABLE_HEADER_DELIMITER_HEIGHT_PX = 3;
+const TABLE_SYNTAX_TREE_TIMEOUT_MS = 50;
 
 const markdownTableEditorTheme = EditorView.theme({
   '.cm-markdown-table-editor': {
@@ -3281,9 +3282,19 @@ function tableByFrom(state: EditorState, from: number): TableLayout | null {
 }
 
 function findTableLayouts(state: EditorState): readonly TableLayout[] {
+  return findTableLayoutsInTree(state, syntaxTree(state));
+}
+
+function findProtectedTableLayouts(state: EditorState): readonly TableLayout[] {
+  const tree =
+    ensureSyntaxTree(state, state.doc.length, TABLE_SYNTAX_TREE_TIMEOUT_MS) ?? syntaxTree(state);
+  return findTableLayoutsInTree(state, tree);
+}
+
+function findTableLayoutsInTree(state: EditorState, tree: Tree): readonly TableLayout[] {
   const layouts: TableLayout[] = [];
   const seen = new Set<number>();
-  syntaxTree(state).iterate({
+  tree.iterate({
     enter: (node) => {
       if (node.name !== 'Table' || seen.has(node.from)) {
         return;
@@ -3457,7 +3468,7 @@ function selectionTouchesHiddenStructure(state: EditorState, from: number, to: n
   if (from === to) {
     return false;
   }
-  return findTableLayouts(state).some((layout) => {
+  const touchesParsedStructure = findProtectedTableLayouts(state).some((layout) => {
     const terminator = tableTerminatorRange(state, layout);
     if (terminator !== null && rangesOverlap(from, to, terminator.from, terminator.to)) {
       return true;
@@ -3479,6 +3490,57 @@ function selectionTouchesHiddenStructure(state: EditorState, from: number, to: n
       return nextRow !== undefined && rangesOverlap(from, to, row.to, nextRow.from);
     });
   });
+  return (
+    touchesParsedStructure ||
+    (!syntaxTreeAvailable(state, state.doc.length) &&
+      selectionTouchesCandidateMarkdownTable(state, from, to))
+  );
+}
+
+function selectionTouchesCandidateMarkdownTable(
+  state: EditorState,
+  from: number,
+  to: number,
+): boolean {
+  const firstSelectedLine = state.doc.lineAt(from).number;
+  const lastSelectedLine = state.doc.lineAt(Math.max(from, to - 1)).number;
+  let scanFromLine = firstSelectedLine;
+  let scanToLine = lastSelectedLine;
+  while (scanFromLine > 1 && state.doc.line(scanFromLine - 1).length > 0) {
+    scanFromLine -= 1;
+  }
+  while (scanToLine < state.doc.lines && state.doc.line(scanToLine + 1).length > 0) {
+    scanToLine += 1;
+  }
+  for (
+    let delimiterLineNumber = scanFromLine + 1;
+    delimiterLineNumber <= scanToLine;
+    delimiterLineNumber += 1
+  ) {
+    const headerLine = state.doc.line(delimiterLineNumber - 1);
+    const delimiterLine = state.doc.line(delimiterLineNumber);
+    if (parseMarkdownTable(`${headerLine.text}\n${delimiterLine.text}`) === null) {
+      continue;
+    }
+    let candidateToLine = delimiterLineNumber;
+    while (candidateToLine < state.doc.lines && state.doc.line(candidateToLine + 1).length > 0) {
+      candidateToLine += 1;
+    }
+    const candidate = parseMarkdownTable(
+      state.sliceDoc(headerLine.from, state.doc.line(candidateToLine).to),
+    );
+    if (candidate === null) {
+      continue;
+    }
+    const firstProseRow = candidate.body.findIndex((row) => !isExplicitTableBodyRow(row));
+    const bodyRowCount = firstProseRow === -1 ? candidate.body.length : firstProseRow;
+    const tableLastLine = state.doc.line(delimiterLineNumber + bodyRowCount);
+    const tableTo = Math.min(tableLastLine.to + 1, state.doc.length);
+    if (rangesOverlap(from, to, headerLine.from, tableTo)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function tableTerminatorRange(

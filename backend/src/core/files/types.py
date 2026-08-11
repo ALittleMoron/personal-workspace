@@ -1,3 +1,3 @@
 from typing import Literal
 
-Namespace = Literal["media"]
+Namespace = Literal["knowledge-private", "media"]

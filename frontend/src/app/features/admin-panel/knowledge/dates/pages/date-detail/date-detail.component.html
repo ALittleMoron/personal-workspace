@@ -103,8 +103,11 @@
           [value]="formSnapshot().description"
           [language]="editorLanguage()"
           [accessibleLabel]="'knowledgeDates.description' | t"
-          [imageUploadsEnabled]="false"
+          [imageCapability]="editorImageCapability()"
+          [uploadInteractionsDisabled]="saving()"
+          [imagePreviewRevision]="imagePreviewRevision()"
           (valueChange)="setDescription($event)"
+          (imageUploadPendingChange)="editorImagePending.set($event)"
         />
       </section>
 
@@ -313,7 +316,7 @@
           type="submit"
           class="btn btn-success"
           data-testid="date-detail-save"
-          [disabled]="saving() || deleting() || loading()"
+          [disabled]="saving() || deleting() || loading() || editorImagePending()"
         >
           {{ 'shared.save' | t }}
         </button>

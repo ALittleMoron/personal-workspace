@@ -1,13 +1,17 @@
 import uuid
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator, Sequence
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
 from dishka import AsyncContainer, make_async_container
 from dishka.integrations.litestar import LitestarProvider, setup_dishka
 from litestar import Litestar
+from litestar.middleware import DefineMiddleware
 from litestar.testing import TestClient
+from litestar.types import ASGIApp, Middleware, Receive, Scope, Send
 
+from entrypoints.litestar.identity import VerifiedAdminIdentity
 from entrypoints.litestar.initializers.main import create_litestar_app
 from infra.ioc.prodivers.database_provider import DatabaseProvider
 from tests.unit.mocks.providers.cache_tools import MockCacheToolsProvider
@@ -18,6 +22,18 @@ from tests.unit.mocks.providers.healthcheck import MockHealthcheckProvider
 from tests.unit.mocks.providers.knowledge import MockKnowledgeProvider
 from tests.unit.mocks.providers.resumes import MockResumesProvider
 from tests.unit.mocks.providers.wiki_links import MockWikiLinksProvider
+
+TEST_CURRENT_DATETIME = datetime(2026, 7, 27, 12, 0, tzinfo=UTC)
+
+
+class AuthenticatedRequestMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        scope["user"] = VerifiedAdminIdentity(username="test")
+        scope["auth"] = "unit-test-authentication"
+        await self.app(scope, receive, send)
 
 
 @pytest.fixture
@@ -34,7 +50,11 @@ async def container(
     container = make_async_container(
         LitestarProvider(),
         DatabaseProvider(),
-        MockGeneralProvider(uuid_=global_random_uuid, hex_uuid=global_random_hex_uuid),
+        MockGeneralProvider(
+            uuid_=global_random_uuid,
+            hex_uuid=global_random_hex_uuid,
+            current_datetime=TEST_CURRENT_DATETIME,
+        ),
         MockFilesProvider(random_suffix=random_suffix),
         MockCalendarProvider(),
         MockKnowledgeProvider(),
@@ -49,12 +69,22 @@ async def container(
 
 @pytest.fixture
 def app(container: AsyncContainer) -> Litestar:
-    return build_test_app(container=container)
+    return build_test_app(
+        container=container,
+        extra_middlewares=[DefineMiddleware(AuthenticatedRequestMiddleware)],
+    )
 
 
-def build_test_app(container: AsyncContainer) -> Litestar:
+def build_test_app(
+    *,
+    container: AsyncContainer,
+    extra_middlewares: Sequence[Middleware],
+) -> Litestar:
     test_app = create_litestar_app(
-        lifespan=[], container=container, extra_plugins=[], extra_middlewares=[]
+        lifespan=[],
+        container=container,
+        extra_plugins=[],
+        extra_middlewares=extra_middlewares,
     )
     setup_dishka(container=container, app=test_app)
     return test_app

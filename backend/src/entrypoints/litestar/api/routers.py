@@ -8,6 +8,7 @@ from entrypoints.litestar.api.i18n.endpoints import api_router as i18n_router
 from entrypoints.litestar.api.knowledge.router import admin_router as knowledge_admin_router
 from entrypoints.litestar.api.resumes.endpoints import admin_router as resumes_admin_router
 from entrypoints.litestar.api.wiki_links.endpoints import admin_router as wiki_links_admin_router
+from entrypoints.litestar.guards import require_verified_admin_identity
 
 admin_api_router = Router(
     "/admin",
@@ -21,6 +22,7 @@ admin_api_router = Router(
     ],
     tags=["admin api"],
     include_in_schema=False,
+    guards=[require_verified_admin_identity],
 )
 
 api_router = Router(

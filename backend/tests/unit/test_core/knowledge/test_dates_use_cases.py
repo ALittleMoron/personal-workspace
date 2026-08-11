@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 
@@ -15,8 +15,9 @@ from core.knowledge.dates.schemas import (
 from core.knowledge.dates.storages import KnowledgeDatesStorage
 from core.knowledge.dates.use_cases import KnowledgeDatesUseCase
 from core.knowledge.exceptions import PersonNotFoundError
-from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.files.enums import KnowledgeFileKind, KnowledgeFileProcessing
 from core.knowledge.files.schemas import KnowledgeFile
+from core.knowledge.files.services import KnowledgeFileCrudService
 from core.knowledge.files.storages import KnowledgeFilesStorage
 from core.knowledge.items.enums import KnowledgeItemKind
 from core.knowledge.items.schemas import KnowledgeItem, KnowledgeTag
@@ -52,12 +53,14 @@ class TestKnowledgeDatesUseCase(TestCase):
         self.item_storage = Mock(spec=KnowledgeItemsStorage)
         self.dates_storage = Mock(spec=KnowledgeDatesStorage)
         self.file_storage = Mock(spec=KnowledgeFilesStorage)
+        self.file_service = Mock(spec=KnowledgeFileCrudService)
         self.file_storage.list_item_files.return_value = []
         self.use_case = KnowledgeDatesUseCase(
             item_service=self.item_service,
             item_storage=self.item_storage,
             dates_storage=self.dates_storage,
             file_storage=self.file_storage,
+            file_service=self.file_service,
         )
 
     async def test_list_validates_tag_and_person_then_projects_page(self) -> None:
@@ -247,22 +250,26 @@ class TestKnowledgeDatesUseCase(TestCase):
         self.dates_storage.list_person_links.return_value = [
             KnowledgeDatePersonLink(date_id=date_id, person_id=person_id),
         ]
-        self.file_storage.list_item_files.return_value = [
-            KnowledgeFile(
-                id=self.factory.core.hex_id(3),
-                item_id=date_id,
-                author_username="owner",
-                kind=KnowledgeFileKind.ATTACHMENT,
-                relative_path="attachments/file.txt",
-                mime_type="text/plain",
-                size_bytes=10,
-                name="file.txt",
-                original_name="file.txt",
-                original_sha256="a" * 64,
-                created_at=CURRENT_DATETIME,
-                updated_at=CURRENT_DATETIME,
-            ),
-        ]
+        file = KnowledgeFile(
+            id=self.factory.core.hex_id(3),
+            item_id=date_id,
+            author_username="owner",
+            kind=KnowledgeFileKind.ATTACHMENT,
+            processing=KnowledgeFileProcessing.RAW,
+            relative_path="attachments/file.txt",
+            mime_type="text/plain",
+            size_bytes=10,
+            name="file.txt",
+            original_name="file.txt",
+            original_sha256="a" * 64,
+            created_at=CURRENT_DATETIME,
+            updated_at=CURRENT_DATETIME,
+        )
+        self.file_storage.list_item_files.return_value = [file]
+        self.file_service.delete_files.return_value = (file.relative_path,)
+        mutations = Mock()
+        mutations.attach_mock(self.file_service.delete_files, "delete_files")
+        mutations.attach_mock(self.item_service.delete_item, "delete_item")
 
         object_names = await self.use_case.delete_date(
             date_id=date_id,
@@ -271,10 +278,13 @@ class TestKnowledgeDatesUseCase(TestCase):
         )
 
         assert object_names == ("attachments/file.txt",)
-        self.item_service.delete_item.assert_awaited_once_with(
-            item_id=date_id,
-            author_username="owner",
-            kind=KnowledgeItemKind.DATE,
-        )
+        assert mutations.method_calls == [
+            call.delete_files(files=[file]),
+            call.delete_item(
+                item_id=date_id,
+                author_username="owner",
+                kind=KnowledgeItemKind.DATE,
+            ),
+        ]
         assert self.item_storage.touch_items.await_args.kwargs["item_ids"] == {person_id}
         assert self.item_storage.touch_items.await_args.kwargs["updated_at"] == CURRENT_DATETIME

@@ -1,5 +1,6 @@
 import secrets
 import uuid
+from datetime import UTC, datetime
 
 from dishka import Provider, Scope, provide
 
@@ -21,3 +22,7 @@ class GeneralProvider(Provider):
         value = IntId(int(uuid.uuid4().hex[:15], 16))
         sign = secrets.choice([-1, 1])
         return IntId(value * sign)
+
+    @provide(scope=Scope.REQUEST, cache=False)
+    async def provide_current_datetime(self) -> datetime:
+        return datetime.now(tz=UTC)

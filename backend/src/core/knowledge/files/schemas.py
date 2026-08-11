@@ -10,7 +10,8 @@ from core.files.exceptions import (
     FileSizeTooLargeError,
     InvalidFileDataError,
 )
-from core.knowledge.files.enums import KnowledgeFileKind
+from core.files.types import Namespace
+from core.knowledge.files.enums import KnowledgeFileKind, KnowledgeFileProcessing
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -31,11 +32,19 @@ class KnowledgeFileRules:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class KnowledgeFileServiceConfig:
+    namespace: Namespace
+    rules: KnowledgeFileRules
+    normalized_raster_image_rules: KnowledgeFileRules
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class KnowledgeFile:
     id: str
     item_id: str
     author_username: str
     kind: KnowledgeFileKind
+    processing: KnowledgeFileProcessing
     relative_path: str
     mime_type: str
     size_bytes: int

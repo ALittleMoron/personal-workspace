@@ -4,7 +4,7 @@ from hashlib import sha1
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, delete, text
 from sqlalchemy.engine import URL, Connection, Engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -16,6 +16,7 @@ from sqlalchemy.pool import NullPool
 
 from infra.config.settings import Settings
 from infra.postgresql import meta
+from infra.postgresql.models import BaseModel
 from infra.postgresql.query_monitoring import install_query_monitoring
 from infra.postgresql.utils import downgrade, migrate
 from scripts.pytest_parallel import build_template_database_name, quote_postgresql_identifier
@@ -104,6 +105,13 @@ def setup_migrations(
     migrate(revision="heads")
     yield
     downgrade(revision="base")
+
+
+@pytest_asyncio.fixture
+async def clear_tables(engine: AsyncEngine) -> None:
+    async with engine.begin() as connection:
+        for table in reversed(BaseModel.metadata.sorted_tables):
+            await connection.execute(delete(table))
 
 
 @pytest_asyncio.fixture

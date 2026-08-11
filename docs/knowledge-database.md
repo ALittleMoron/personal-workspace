@@ -23,8 +23,16 @@ searchability, type safety, and explicit product behavior, so it is not the exte
 
 ## PostgreSQL Model
 
-Migrations `0014_add_knowledge_people_and_private_files.py`,
-`0015_add_knowledge_dates.py`, and `0016_add_people_birthday_calendar_index.py` add:
+The clean `0001_initial_schema.py` migration creates the complete current schema for a fresh
+deployment. `FileModel` is the canonical metadata table for every stored file, including future
+Resume and other domain usages. Knowledge does not duplicate that metadata. Instead,
+`KnowledgeItemFileModel` links a file to its owning item and records the Knowledge-specific kind and
+processing provenance.
+
+Both association foreign keys use `RESTRICT`. Deleting a Knowledge file locks its canonical file
+row, removes the association, checks all registered usages, and deletes the metadata and object only
+when no usage remains. Shared file operations are namespace-scoped so private `knowledge-private`
+rows cannot appear through the public `media` storage.
 
 ## Admin API
 
@@ -46,17 +54,31 @@ Dates:
 Taxonomy and private files:
 
 The API returns a protected `contentPath` for file reads, never an S3 URL or presigned URL.
+`POST /api/admin/knowledge/items/{itemId}/editor-images` accepts private Markdown images. The result
+uses the ordinary attachment response and remains visible in the item's attachment list.
+
+The `/api/admin` tree is fail-closed and accepts only a verified request-scope identity. The planned
+authenticator has one administrator configured through the environment; it does not require user,
+team, or role tables.
 
 ## Private Files
 
 Photos accept JPEG, PNG, or WebP up to 5 MiB. Pillow fully decodes the supplied bytes, verifies that
 the detected type matches the declared MIME type, rejects animated images and decompression-bomb
-warnings/errors, applies EXIF orientation, bounds the image to 2048×2048, and always writes WebP.
+warnings/errors, rejects source dimensions above the explicit pixel limit before full decode,
+applies EXIF orientation, bounds the image to 2048×2048, and always writes WebP.
 Attachments accept arbitrary MIME types up to 20 MiB and are served as downloads rather than
 trusted active content. Each upload route has a request-body limit equal to its advertised file
 limit plus bounded multipart overhead, and the backend reads at most the file limit plus one byte
 before applying the core size rule. Persisted original names and MIME types are capped at 255
 characters.
+
+Markdown editor images follow the photo validation and normalization path but are persisted as
+ordinary attachments. Their association also records `normalizedRasterImage` provenance. Only an
+attachment with that persisted provenance and the normalized `image/webp` type may be served inline;
+raw attachments remain downloads even if their filename, path, or declared MIME resembles an editor
+image. Removing an image reference from Markdown does not remove the attachment, so it remains
+available for later reuse.
 
 Database deletion is transaction-owned. Replaced/deleted object names are registered as
 post-commit cleanup actions, so rollback cannot remove still-referenced data. Cleanup is best
@@ -76,9 +98,13 @@ Knowledge file sizes use the smallest meaningful localized unit: bytes below 1 K
 The workspace uses explicit typed forms and feature models. It does not render a schema-driven
 universal form. Protected photos are fetched as blobs and displayed through short-lived browser
 object URLs; old URLs are revoked on replacement, navigation, errors, and component destruction.
-The shared Markdown editor has image uploads disabled for People and Dates descriptions, because
-inline images would bypass the private knowledge-file workflow. A shared locale-aware annual-date
-formatter renders day/month values with or without the optional year in both workspaces.
+The shared Markdown editor accepts a domain-neutral image capability. People and Dates bind it to
+the private item-scoped upload API, insert a protected file reference into Markdown, and fetch
+preview bytes through authenticated Blob requests. Protected backend paths never become live image
+sources. Preview object URLs are revoked on content or language changes, errors, replacement, and
+component destruction. Save is gated while uploads are queued or active, while saving temporarily
+disables new uploads. A shared locale-aware annual-date formatter renders day/month values with or
+without the optional year in both workspaces.
 
 ## Operations
 
@@ -91,8 +117,10 @@ private `knowledge-private` bucket. After a deployment:
 3. From the public side, confirm both
    `https://s3.<APP_DOMAIN>/knowledge-private` and a path below it return `404`.
 4. As an owner/admin, upload and download a small photo and attachment through the People UI and an
-   attachment through Dates. Confirm replacement/deletion removes obsolete objects only after the
-   request commits.
+   attachment through Dates. Paste or select one Markdown image in each editor, confirm its private
+   Blob preview and ordinary attachment entry, then remove only the Markdown reference and confirm
+   the attachment remains. Confirm explicit replacement/deletion removes obsolete objects only
+   after the request commits.
 5. Confirm the knowledge controllers are absent from `/api/docs/openapi.json` and private responses
    carry `no-store`.
 

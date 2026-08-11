@@ -48,7 +48,10 @@ class TestFileOrphanCleanupService(TestCase):
             ],
         )
         storage.delete_file.assert_has_awaits(
-            [call(file_id=first.id), call(file_id=second.id)],
+            [
+                call(namespace="media", file_id=first.id),
+                call(namespace="media", file_id=second.id),
+            ],
         )
 
     async def test_prune_keeps_metadata_after_client_error_and_continues(self) -> None:
@@ -75,7 +78,7 @@ class TestFileOrphanCleanupService(TestCase):
 
         assert result.failed_count == 1
         assert result.deleted_count == 1
-        storage.delete_file.assert_awaited_once_with(file_id=deleted.id)
+        storage.delete_file.assert_awaited_once_with(namespace="media", file_id=deleted.id)
 
     async def test_prune_clears_orphan_marker_when_usage_reappeared(self) -> None:
         cutoff = datetime(2026, 7, 1, tzinfo=UTC)
@@ -98,7 +101,10 @@ class TestFileOrphanCleanupService(TestCase):
             failed_count=0,
             skipped_in_use_count=1,
         )
-        storage.set_files_attached.assert_awaited_once_with(file_ids=frozenset({file.id}))
+        storage.set_files_attached.assert_awaited_once_with(
+            namespace="media",
+            file_ids=frozenset({file.id}),
+        )
         client.delete_file.assert_not_called()
         storage.delete_file.assert_not_called()
 

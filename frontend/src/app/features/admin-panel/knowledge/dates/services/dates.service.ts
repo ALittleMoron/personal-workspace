@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiClient, QueryParams } from '../../../../../core/http/api-client.service';
-import { KnowledgeFile } from '../../people/models/people.model';
+import { KnowledgeFile } from '../../shared/knowledge-file.model';
 import {
   KnowledgeDateCreatePayload,
   KnowledgeDateDetail,

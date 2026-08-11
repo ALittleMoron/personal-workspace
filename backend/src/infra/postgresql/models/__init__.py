@@ -2,7 +2,7 @@ from .base import BaseModel as BaseModel
 from .files import FileModel as FileModel
 from .knowledge import KnowledgeDateDetailsModel as KnowledgeDateDetailsModel
 from .knowledge import KnowledgeDatePersonModel as KnowledgeDatePersonModel
-from .knowledge import KnowledgeFileModel as KnowledgeFileModel
+from .knowledge import KnowledgeItemFileModel as KnowledgeItemFileModel
 from .knowledge import KnowledgeItemModel as KnowledgeItemModel
 from .knowledge import KnowledgeItemTagModel as KnowledgeItemTagModel
 from .knowledge import KnowledgeTagModel as KnowledgeTagModel

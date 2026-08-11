@@ -15,6 +15,7 @@ from core.knowledge.dates.schemas import (
 from core.knowledge.dates.storages import KnowledgeDatesStorage
 from core.knowledge.exceptions import KnowledgeTagNotFoundError, PersonNotFoundError
 from core.knowledge.files.enums import KnowledgeFileKind
+from core.knowledge.files.services import KnowledgeFileCrudService
 from core.knowledge.files.storages import KnowledgeFilesStorage
 from core.knowledge.items.enums import KnowledgeItemKind
 from core.knowledge.items.schemas import KnowledgeItemCreateParams, KnowledgeItemUpdateParams
@@ -28,6 +29,7 @@ class KnowledgeDatesUseCase:
     item_storage: KnowledgeItemsStorage
     dates_storage: KnowledgeDatesStorage
     file_storage: KnowledgeFilesStorage
+    file_service: KnowledgeFileCrudService
 
     async def list_dates(self, *, filters: KnowledgeDateFilters) -> KnowledgeDatesPage:
         search_query = (
@@ -228,6 +230,7 @@ class KnowledgeDatesUseCase:
             item_id=date_id,
             author_username=author_username,
         )
+        object_names_to_delete = await self.file_service.delete_files(files=files)
         await self.item_service.delete_item(
             item_id=date_id,
             author_username=author_username,
@@ -239,7 +242,7 @@ class KnowledgeDatesUseCase:
             kind=KnowledgeItemKind.PERSON,
             updated_at=current_datetime,
         )
-        return tuple(file.relative_path for file in files)
+        return object_names_to_delete
 
     async def list_date_references_for_person(
         self,

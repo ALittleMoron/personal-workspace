@@ -2,6 +2,7 @@ import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import {
   AfterViewInit,
+  AfterViewChecked,
   ChangeDetectionStrategy,
   Component,
   CSP_NONCE,
@@ -19,6 +20,7 @@ import {
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Observable, Subscription } from 'rxjs';
 import {
   acceptCompletion,
   closeBracketsKeymap,
@@ -78,11 +80,31 @@ type AuthoringMode = 'edit' | 'source';
 type EditorMode = AuthoringMode | 'preview';
 type UploadStatus = 'queued' | 'uploading' | 'error';
 
+export interface MarkdownEditorImageUploadResult {
+  markdownUrl: string;
+}
+
+export interface MarkdownEditorImageCapability {
+  acceptedMimeTypes: readonly string[];
+  upload(file: File): Observable<MarkdownEditorImageUploadResult>;
+  loadPreview(markdownUrl: string): Observable<Blob>;
+}
+
 interface ImageUpload {
   id: number;
   file: File;
   anchor: number;
   status: UploadStatus;
+}
+
+interface UnsupportedImage {
+  id: number;
+  file: File;
+}
+
+interface PreviewImageError {
+  index: number;
+  source: string;
 }
 
 interface ResolvedShortcutGroup {
@@ -153,7 +175,7 @@ let editorInstanceId = 0;
     './markdown-editor.theme-highlighting.scss',
   ],
 })
-export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
+export class MarkdownEditorComponent implements AfterViewInit, AfterViewChecked, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly wikiLinkRenderer = inject(WikiLinkRendererService);
   private readonly wikiLinkTargets = inject(WikiLinkTargetsService);
@@ -180,6 +202,16 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   private fullscreenSnapshot: FullscreenSnapshot | null = null;
   private releaseFullscreenPageScroll: (() => void) | null = null;
   private consumeFullscreenEscapeKeyup = false;
+  private previewGeneration = 0;
+  private previewSubscriptions: Subscription | null = null;
+  private readonly previewObjectUrls = new Map<HTMLImageElement, string>();
+  private readonly previewImageSources = new Map<number, string>();
+  private renderedPreviewCapability: MarkdownEditorImageCapability | null = null;
+  private renderedPreviewRevision = 0;
+  private renderedPreviewValue = '';
+  private renderedPreviewLanguage: LanguageCode | null = null;
+  private renderedPreviewDocument = '';
+  private renderedPreviewActive = false;
   private readonly editorScrollMouseDownListener = (event: MouseEvent): void => {
     const view = this.editorView;
     if (view === null || event.target !== view.scrollDOM) {
@@ -214,8 +246,11 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   readonly value = input.required<string>();
   readonly language = input.required<LanguageCode>();
   readonly accessibleLabel = input.required<string>();
-  readonly imageUploadsEnabled = input.required<boolean>();
+  readonly imageCapability = input.required<MarkdownEditorImageCapability | null>();
+  readonly uploadInteractionsDisabled = input.required<boolean>();
+  readonly imagePreviewRevision = input.required<number>();
   readonly valueChange = output<string>();
+  readonly imageUploadPendingChange = output<boolean>();
 
   readonly mode = signal<EditorMode>('edit');
   readonly fullscreen = signal(false);
@@ -229,6 +264,11 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   );
   readonly internalValue = signal('');
   readonly uploads = signal<readonly ImageUpload[]>([]);
+  readonly unsupportedImages = signal<readonly UnsupportedImage[]>([]);
+  readonly previewImageErrors = signal<readonly PreviewImageError[]>([]);
+  readonly imageUploadPending = computed(() =>
+    this.uploads().some((upload) => upload.status === 'queued' || upload.status === 'uploading'),
+  );
   readonly uploading = computed(() =>
     this.uploads().some((upload) => upload.status === 'uploading'),
   );
@@ -236,9 +276,17 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
     this.uploads().filter((upload) => upload.status === 'error'),
   );
   readonly wikiLinkRegistryUnavailable = signal(false);
-  readonly previewHtml = computed(() =>
-    this.wikiLinkRenderer.render(this.internalValue(), this.language()),
+  readonly imageUploadsEnabled = computed(() => this.imageCapability() !== null);
+  readonly imageUploadInteractionsEnabled = computed(
+    () => this.imageCapability() !== null && !this.uploadInteractionsDisabled(),
   );
+  readonly acceptedImageMimeTypes = computed(
+    () => this.imageCapability()?.acceptedMimeTypes.join(',') ?? '',
+  );
+  readonly previewHtml = computed(() => {
+    const rendered = this.wikiLinkRenderer.render(this.internalValue(), this.language());
+    return this.preparePreviewHtml(rendered);
+  });
   readonly previewEmpty = computed(() => this.internalValue().trim() === '');
   readonly shortcutGroups = computed(() =>
     filterImageCommands(resolveShortcutGroups(), this.imageUploadsEnabled()),
@@ -344,7 +392,39 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  ngAfterViewChecked(): void {
+    const capability = this.imageCapability();
+    const previewRevision = this.imagePreviewRevision();
+    const value = this.internalValue();
+    const language = this.language();
+    const active = this.mode() === 'preview' && capability !== null;
+    const previewDocument = active ? this.previewHtml() : '';
+    if (
+      active === this.renderedPreviewActive &&
+      capability === this.renderedPreviewCapability &&
+      previewRevision === this.renderedPreviewRevision &&
+      value === this.renderedPreviewValue &&
+      language === this.renderedPreviewLanguage &&
+      previewDocument === this.renderedPreviewDocument
+    ) {
+      return;
+    }
+
+    this.renderedPreviewActive = active;
+    this.renderedPreviewCapability = capability;
+    this.renderedPreviewRevision = previewRevision;
+    this.renderedPreviewValue = value;
+    this.renderedPreviewLanguage = language;
+    this.renderedPreviewDocument = previewDocument;
+    this.clearPreviewResources();
+    if (!active || capability === null || !isPlatformBrowser(this.platformId)) {
+      return;
+    }
+    this.loadPreviewImages(capability);
+  }
+
   ngOnDestroy(): void {
+    this.clearPreviewResources();
     this.disarmFullscreenEscapeKeyup();
     this.releaseFullscreenPageScroll?.();
     this.releaseFullscreenPageScroll = null;
@@ -458,7 +538,7 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const buttons = Array.from(
-      toolbar.querySelectorAll<HTMLButtonElement>('[data-markdown-command]'),
+      toolbar.querySelectorAll<HTMLButtonElement>('[data-markdown-command]:not(:disabled)'),
     );
     const currentIndex = buttons.indexOf(target);
     const nextIndex = toolbarButtonIndex(event.key, currentIndex, buttons.length);
@@ -516,7 +596,7 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   onImageInput(event: Event): void {
-    if (!this.imageUploadsEnabled()) {
+    if (!this.imageUploadInteractionsEnabled()) {
       return;
     }
     const input = event.currentTarget;
@@ -557,15 +637,52 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   retryUpload(id: number): void {
+    if (!this.imageUploadInteractionsEnabled()) {
+      return;
+    }
     this.uploads.update((uploads) =>
       uploads.map((upload) => (upload.id === id ? { ...upload, status: 'queued' } : upload)),
     );
+    this.emitImageUploadPending();
     this.processNextUpload();
   }
 
   dismissUpload(id: number): void {
     this.uploads.update((uploads) => uploads.filter((upload) => upload.id !== id));
     this.processNextUpload();
+    this.emitImageUploadPending();
+  }
+
+  dismissUnsupportedImage(id: number): void {
+    this.unsupportedImages.update((images) => images.filter((image) => image.id !== id));
+  }
+
+  retryPreviewImage(index: number): void {
+    const error = this.previewImageErrors().find((value) => value.index === index);
+    const capability = this.imageCapability();
+    const subscriptions = this.previewSubscriptions;
+    const preview = this.editorShell.nativeElement.querySelector<HTMLElement>(
+      '[data-testid="markdown-editor-preview-content"]',
+    );
+    const image = preview?.querySelectorAll<HTMLImageElement>('img').item(index) ?? null;
+    if (
+      error === undefined ||
+      capability === null ||
+      subscriptions === null ||
+      image === null ||
+      this.mode() !== 'preview'
+    ) {
+      return;
+    }
+    this.previewImageErrors.update((errors) => errors.filter((value) => value.index !== index));
+    this.loadPreviewImage(
+      capability,
+      index,
+      error.source,
+      image,
+      this.previewGeneration,
+      subscriptions,
+    );
   }
 
   shortcutParts(command: MarkdownEditorCommandDefinition): readonly string[] {
@@ -725,7 +842,7 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
       return true;
     }
     if (command === 'image') {
-      if (!this.imageUploadsEnabled()) {
+      if (!this.imageUploadInteractionsEnabled()) {
         return false;
       }
       this.pendingImageInsertionPosition = view.state.selection.main.head;
@@ -833,7 +950,7 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private handlePaste(event: ClipboardEvent, view: EditorView): boolean {
-    if (!this.imageUploadsEnabled()) {
+    if (!this.imageUploadInteractionsEnabled()) {
       return false;
     }
     const files = Array.from(event.clipboardData?.items ?? [])
@@ -850,7 +967,7 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleDrop(event: DragEvent, view: EditorView): boolean {
-    if (!this.imageUploadsEnabled()) {
+    if (!this.imageUploadInteractionsEnabled()) {
       return false;
     }
     const files = Array.from(event.dataTransfer?.files ?? []).filter((file) =>
@@ -867,7 +984,7 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleDragOver(event: DragEvent): boolean {
-    if (!this.imageUploadsEnabled()) {
+    if (!this.imageUploadInteractionsEnabled()) {
       return false;
     }
     const hasImage = Array.from(event.dataTransfer?.items ?? []).some(
@@ -884,10 +1001,19 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   private queueImageUploads(files: readonly File[], anchor: number): void {
-    if (!this.imageUploadsEnabled()) {
+    const capability = this.imageCapability();
+    if (capability === null || this.uploadInteractionsDisabled()) {
       return;
     }
-    const images = files.filter((file) => file.type.startsWith('image/'));
+    const acceptedMimeTypes = new Set(capability.acceptedMimeTypes);
+    const images = files.filter((file) => acceptedMimeTypes.has(file.type));
+    const unsupported = files.filter((file) => !acceptedMimeTypes.has(file.type));
+    if (unsupported.length > 0) {
+      this.unsupportedImages.update((current) => [
+        ...current,
+        ...unsupported.map((file) => ({ id: ++this.nextUploadId, file })),
+      ]);
+    }
     if (images.length === 0) {
       return;
     }
@@ -898,10 +1024,14 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
       status: 'queued' as const,
     }));
     this.uploads.update((uploads) => [...uploads, ...queued]);
+    this.emitImageUploadPending();
     this.processNextUpload();
   }
 
   private processNextUpload(): void {
+    if (this.uploadInteractionsDisabled()) {
+      return;
+    }
     if (this.uploads().some((upload) => upload.status === 'uploading')) {
       return;
     }
@@ -912,12 +1042,16 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
     if (next === undefined) {
       return;
     }
+    const capability = this.imageCapability();
+    if (capability === null) {
+      return;
+    }
     this.updateUploadStatus(next.id, 'uploading');
-    this.imageUpload
-      .uploadEditorImage(next.file)
+    capability
+      .upload(next.file)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (markdownUrl) => {
+        next: (result) => {
           const current = this.uploads().find((upload) => upload.id === next.id);
           const view = this.editorView;
           if (current === undefined || view === null) {
@@ -927,21 +1061,138 @@ export class MarkdownEditorComponent implements AfterViewInit, OnDestroy {
             changes: {
               from: current.anchor,
               to: current.anchor,
-              insert: markdownImage(next.file.name, markdownUrl),
+              insert: markdownImage(next.file.name, result.markdownUrl),
             },
             userEvent: 'input',
           });
           this.uploads.update((uploads) => uploads.filter((upload) => upload.id !== next.id));
           this.processNextUpload();
+          this.emitImageUploadPending();
         },
-        error: () => this.updateUploadStatus(next.id, 'error'),
+        error: () => {
+          this.updateUploadStatus(next.id, 'error');
+          this.emitImageUploadPending();
+        },
       });
+  }
+
+  private preparePreviewHtml(rendered: string): string {
+    const capability = this.imageCapability();
+    this.previewImageSources.clear();
+    if (capability === null) {
+      return rendered;
+    }
+    if (!isPlatformBrowser(this.platformId)) {
+      return '';
+    }
+
+    const template = this.document.createElement('template');
+    template.innerHTML = rendered;
+    let index = 0;
+    for (const image of template.content.querySelectorAll<HTMLImageElement>('img')) {
+      const source = image.getAttribute('src');
+      if (source === null) {
+        index += 1;
+        continue;
+      }
+      image.removeAttribute('src');
+      this.previewImageSources.set(index, source);
+      index += 1;
+    }
+    return template.innerHTML;
+  }
+
+  private loadPreviewImages(capability: MarkdownEditorImageCapability): void {
+    const browserUrl = this.document.defaultView?.URL;
+    const preview = this.editorShell.nativeElement.querySelector<HTMLElement>(
+      '[data-testid="markdown-editor-preview-content"]',
+    );
+    if (browserUrl === undefined || preview === null) {
+      return;
+    }
+
+    const generation = this.previewGeneration;
+    const subscriptions = new Subscription();
+    this.previewSubscriptions = subscriptions;
+    const images = preview.querySelectorAll<HTMLImageElement>('img');
+    for (const [index, source] of this.previewImageSources) {
+      const image = images.item(index);
+      if (image === null) {
+        continue;
+      }
+      this.loadPreviewImage(capability, index, source, image, generation, subscriptions);
+    }
+  }
+
+  private loadPreviewImage(
+    capability: MarkdownEditorImageCapability,
+    index: number,
+    source: string,
+    image: HTMLImageElement,
+    generation: number,
+    subscriptions: Subscription,
+  ): void {
+    const browserUrl = this.document.defaultView?.URL;
+    if (browserUrl === undefined) {
+      return;
+    }
+    subscriptions.add(
+      capability.loadPreview(source).subscribe({
+        next: (blob) => {
+          if (generation !== this.previewGeneration || !image.isConnected) {
+            return;
+          }
+          const objectUrl = browserUrl.createObjectURL(blob);
+          if (generation !== this.previewGeneration || !image.isConnected) {
+            browserUrl.revokeObjectURL(objectUrl);
+            return;
+          }
+          const previousObjectUrl = this.previewObjectUrls.get(image);
+          if (previousObjectUrl !== undefined) {
+            browserUrl.revokeObjectURL(previousObjectUrl);
+          }
+          image.setAttribute('src', objectUrl);
+          this.previewObjectUrls.set(image, objectUrl);
+          this.previewImageErrors.update((errors) =>
+            errors.filter((error) => error.index !== index),
+          );
+        },
+        error: () => {
+          if (generation !== this.previewGeneration || !image.isConnected) {
+            return;
+          }
+          this.previewImageErrors.update((errors) => [
+            ...errors.filter((error) => error.index !== index),
+            { index, source },
+          ]);
+        },
+      }),
+    );
+  }
+
+  private clearPreviewResources(): void {
+    this.previewGeneration += 1;
+    this.previewSubscriptions?.unsubscribe();
+    this.previewSubscriptions = null;
+    this.previewImageErrors.set([]);
+    const browserUrl = this.document.defaultView?.URL;
+    for (const [image, objectUrl] of this.previewObjectUrls) {
+      if (image.getAttribute('src') === objectUrl) {
+        image.removeAttribute('src');
+      }
+      browserUrl?.revokeObjectURL(objectUrl);
+    }
+    this.previewObjectUrls.clear();
   }
 
   private updateUploadStatus(id: number, status: UploadStatus): void {
     this.uploads.update((uploads) =>
       uploads.map((upload) => (upload.id === id ? { ...upload, status } : upload)),
     );
+  }
+
+  private emitImageUploadPending(): void {
+    this.imageUploadPendingChange.emit(this.imageUploadPending());
   }
 
   private currentCursor(): number {
