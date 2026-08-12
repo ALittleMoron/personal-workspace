@@ -24,7 +24,7 @@ describe('WikiLinkTargetsService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('loads typed wiki-link targets with explicit language', () => {
+  it('loads the current empty wiki-link registry with explicit language', () => {
     let received: WikiLinkTargetRegistry | undefined;
 
     service.getTargets('ru').subscribe((registry) => (received = registry));
@@ -32,55 +32,29 @@ describe('WikiLinkTargetsService', () => {
     const req = httpMock.expectOne((r) => r.url.endsWith('/api/admin/wiki-links/targets'));
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('language')).toBe('ru');
+    req.flush({ targets: [] });
+
+    expect(received?.groups).toEqual([]);
+    expect(received?.lookup.size).toBe(0);
+  });
+
+  it('does not restore removed target domains from a stale response', () => {
+    let received: WikiLinkTargetRegistry | undefined;
+
+    service.getTargets('en').subscribe((registry) => (received = registry));
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/admin/wiki-links/targets'));
     req.flush({
       targets: [
         {
           type: 'articles',
-          items: [
-            {
-              slug: 'typed-articles',
-              title: 'Типизированные статьи',
-              publishStatus: 'Published',
-            },
-          ],
-        },
-        {
-          type: 'matrix',
-          items: [
-            {
-              slug: 'how-to-write-function',
-              title: 'Как написать функцию',
-              publishStatus: 'Draft',
-            },
-          ],
+          items: [{ slug: 'legacy', title: 'Legacy', publishStatus: 'Published' }],
         },
       ],
     });
 
-    expect(received?.groups).toEqual([
-      {
-        type: 'articles',
-        items: [
-          {
-            slug: 'typed-articles',
-            title: 'Типизированные статьи',
-            publishStatus: 'Published',
-          },
-        ],
-      },
-      {
-        type: 'matrix',
-        items: [
-          {
-            slug: 'how-to-write-function',
-            title: 'Как написать функцию',
-            publishStatus: 'Draft',
-          },
-        ],
-      },
-    ]);
-    expect(received?.lookup.get('articles')).toEqual(new Set(['typed-articles']));
-    expect(received?.lookup.get('matrix')).toEqual(new Set(['how-to-write-function']));
+    expect(received?.groups).toEqual([]);
+    expect(received?.lookup.size).toBe(0);
   });
 
   it('shares one HTTP request between subscribers for the same language', () => {

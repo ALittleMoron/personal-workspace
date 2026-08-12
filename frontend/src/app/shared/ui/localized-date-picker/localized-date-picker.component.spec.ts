@@ -418,7 +418,7 @@ describe('LocalizedDatePickerComponent', () => {
 });
 
 describe('LocalizedDatePickerComponent on the server', () => {
-  it('does not call browser constraint-validation APIs during SSR', async () => {
+  it('does not call browser constraint-validation APIs without a browser defaultView', async () => {
     await TestBed.configureTestingModule({
       imports: [LocalizedDatePickerComponent],
       providers: [{ provide: PLATFORM_ID, useValue: 'server' }],

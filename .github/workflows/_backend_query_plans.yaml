@@ -1,0 +1,49 @@
+name: Backend query plans
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  query-plans:
+    name: Backend query plans
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    services:
+      postgres:
+        image: postgres:18.4-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: my_site_database_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d my_site_database_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 55432:5432
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: backend/pyproject.toml
+      - uses: astral-sh/setup-uv@v9.0.0
+        with:
+          cache-suffix: backend-query-plans
+      - name: Run Knowledge and Resumes query plans
+        run: make query-plans-realistic
+      - name: Upload query-plan reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: query-plan-reports
+          path: backend/performance/reports/query-plans/
+          if-no-files-found: error

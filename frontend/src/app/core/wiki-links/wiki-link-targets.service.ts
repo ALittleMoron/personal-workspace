@@ -2,14 +2,10 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, shareReplay } from 'rxjs';
 import { ApiClient } from '../http/api-client.service';
 import { LanguageCode } from '../i18n/i18n.model';
-import {
-  WikiLinkTargetGroup,
-  WikiLinkTargetRegistry,
-  createWikiLinkTargetRegistry,
-} from './wiki-links';
+import { WikiLinkTargetRegistry, createWikiLinkTargetRegistry } from './wiki-links';
 
 interface WikiLinkTargetsDto {
-  targets: WikiLinkTargetGroup[];
+  targets: readonly [];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -26,7 +22,7 @@ export class WikiLinkTargetsService {
     const registry = this.api
       .get<WikiLinkTargetsDto>('/api/admin/wiki-links/targets', { language })
       .pipe(
-        map((dto) => createWikiLinkTargetRegistry(dto.targets)),
+        map(() => createWikiLinkTargetRegistry([])),
         shareReplay({ bufferSize: 1, refCount: false }),
       );
     this.registries.set(language, registry);

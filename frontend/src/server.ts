@@ -1,24 +1,8 @@
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node';
 import { join } from 'node:path';
-import { createExpressApp, readRequiredPort } from './server-app';
+import { createExpressApp, readRequiredPort, startStaticServer } from './server-app';
 
-const browserDistFolder = join(import.meta.dirname, '../browser');
-const app = createExpressApp({
-  browserDistFolder,
-  angularApp: new AngularNodeAppEngine(),
-  responseWriter: writeResponseToNodeResponse,
-});
+const browserDistFolder = join(__dirname, '../browser');
+const app = createExpressApp({ browserDistFolder });
+const port = readRequiredPort();
 
-if (isMainModule(import.meta.url) || process.env['pm_id']) {
-  const port = readRequiredPort();
-  app.listen(port, () => {
-    console.log(`Node Express server listening on http://localhost:${port}`);
-  });
-}
-
-export const reqHandler = createNodeRequestHandler(app);
+startStaticServer({ app, port });

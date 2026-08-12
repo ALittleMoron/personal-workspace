@@ -1,77 +1,58 @@
 # My Site Frontend
 
-In the full application stack, infrastructure nginx remains the public edge proxy:
+The public edge remains infrastructure-owned nginx:
 
-- `/` is proxied to the frontend Node.js SSR container.
-- `/api/*` is proxied to the backend service.
-- `/sitemap.xml` and `/robots.txt` are proxied to backend-generated discovery endpoints.
-- TLS, public domains, MinIO, and backup UI routing stay in the infrastructure layer.
+- `/api/*` is proxied to Litestar.
+- Browser navigation is proxied to the frontend Node static shell.
+- TLS, public domain routing, MinIO routing and VPN-only panels belong to `infra/`.
 
-## Development server
+The application is Angular CSR only. Angular builds browser assets; the Node/Express runtime serves
+them, returns `/healthz`, caches versioned static assets, and serves `index.html` only for requests
+that accept HTML and have no file extension. nginx supplies a per-request CSP nonce; the shell
+validates it before replacing the `__CSP_NONCE__` placeholders in the HTML.
 
-Use Node.js 24.16.0 for local frontend commands (`.nvmrc` matches CI). The production Docker
-image uses its own pinned Node.js runtime documented below.
+## Development and build
 
-To start a local development server, run:
-
-```bash
-npm start
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Building
-
-Frontend Make targets prepare npm dependencies automatically when `node_modules` is missing or stale.
+Use the Node version in `.nvmrc` for local commands. Make targets prepare dependencies when needed:
 
 ```bash
+make test
+make lint
+make typecheck
+make format-check
 make build
 ```
 
-The production build is written to `dist/my-site-frontend/browser`.
+The production browser build is under `dist/my-site-frontend/browser`; `tsconfig.server.json`
+compiles the small Node static server under `dist/my-site-frontend/server`. The runtime requires an
+explicit positive `PORT` and Compose provides `PORT=4000`.
 
-```bash
-make ssr-smoke
-```
+## Lighthouse
 
-To build the production SSR bundle and run strict Lighthouse CI quality and performance gates for
-the public SSR/CSR route sample, run:
+Run the CSR quality gate with:
 
 ```bash
 make lighthouse
 ```
 
-Reports are written to `performance/reports/lighthouse/`.
+It builds the application, uses the static server and audits the localized public case-study and
+updates routes for performance, accessibility and best practices. Reports are written to
+`performance/reports/lighthouse/`.
 
 ## Docker image
 
-Build the frontend image from this directory:
+Build from this directory:
 
 ```bash
 docker build -t "my_site_frontend:${IMAGE_TAG:?set IMAGE_TAG}" .
 ```
 
-The image uses:
+The builder and runtime use the pinned Node Alpine image. The runtime installs production
+dependencies, removes npm tooling/cache, runs as the non-root `node` user with a read-only root
+filesystem supplied by Compose, and starts `dist/my-site-frontend/server/server.js`.
 
-- `node:26.4.0-alpine` to install dependencies and run the Angular production build.
-- `node:26.4.0-alpine` as the production runtime for `dist/my-site-frontend/server/server.mjs`.
-- Production dependencies are installed in the runtime stage, then npm/npx and the npm cache are removed from the final image because the server runtime only needs `node`.
-- Explicit runtime environment: `PORT`, `SSR_API_ORIGIN`, `APP_URL_SCHEMA`, `APP_DOMAIN`, and optionally `SSR_PUBLIC_ORIGIN` / `NG_ALLOWED_HOSTS`.
+## Repository boundary
 
-## Repository split boundary
-
-This directory is intended to become a standalone frontend repository later. Frontend-owned files should stay here, including Angular source code, public assets, the frontend Dockerfile, and the Angular SSR runtime entrypoint.
-
-The frontend should not own TLS, public domain routing, backend proxy rules, sitemap/robots routing, MinIO routing, or backup service routing. Those belong to the infrastructure repository.
-
-## Running unit tests
-
-```bash
-make test
-```
-
-## Linting
-
-```bash
-make lint
-```
+Frontend-owned files include Angular source, static assets, tests, the frontend Dockerfile and the
+Node static shell. Do not move TLS, edge proxy, backend API, MinIO, VPN-panel routing or deployment
+ownership into this directory.

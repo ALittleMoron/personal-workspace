@@ -28,10 +28,6 @@ export const routes: Routes = [
 function publicRoutes(): Routes {
   return [
     {
-      path: 'sitemap',
-      loadChildren: () => import('./features/sitemap/sitemap.routes').then((m) => m.sitemapRoutes),
-    },
-    {
       path: 'updates',
       loadChildren: () => import('./features/updates/updates.routes').then((m) => m.updatesRoutes),
     },

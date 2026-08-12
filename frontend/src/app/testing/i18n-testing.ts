@@ -365,6 +365,9 @@ const I18N_TEST_MESSAGES: Record<string, string> = {
   'adminResumeWorkspace.missing.summary': 'Добавьте саммари.',
   'adminResumeWorkspace.missing.skills': 'Добавьте навыки.',
   'adminResumeWorkspace.missing.experience': 'Добавьте опыт.',
+  'siteBuild.title': 'Как устроен сайт',
+  'updates.title': 'Обновления',
+  'notFound.title': 'Страница не найдена',
   'shared.datePicker.placeholder': 'дд.мм.гггг',
   'shared.datePicker.open': 'Открыть календарь',
   'shared.datePicker.change': 'Изменить дату',
@@ -381,8 +384,6 @@ const I18N_TEST_MESSAGES: Record<string, string> = {
   'shared.datePicker.requiredDate': 'Укажите дату.',
   'shared.datePicker.keyboardHelp':
     'Используйте стрелки для выбора дня, Page Up и Page Down для смены месяца.',
-  'sitemap.title': 'Карта сайта',
-  'sitemap.siteBuild': 'Как устроен сайт',
   'notFound.home': 'Вернуться на главную',
 };
 
@@ -476,6 +477,9 @@ const I18N_TEST_MESSAGES_EN: Record<string, string> = {
   'adminResumeWorkspace.missing.summary': 'Add a summary.',
   'adminResumeWorkspace.missing.skills': 'Add skills.',
   'adminResumeWorkspace.missing.experience': 'Add experience.',
+  'siteBuild.title': 'How this site is built',
+  'updates.title': 'Updates',
+  'notFound.title': 'Page not found',
 };
 
 export function provideI18nTesting(messages: Record<string, string> = {}): Provider {

@@ -24,4 +24,4 @@ COPY --from=builder --chown=node:node /app/dist/my-site-frontend ./dist/my-site-
 
 USER node
 EXPOSE 4000
-CMD ["node", "dist/my-site-frontend/server/server.mjs"]
+CMD ["node", "dist/my-site-frontend/server/server.js"]

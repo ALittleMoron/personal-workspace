@@ -57,6 +57,7 @@ frontend/.vercel
 frontend/.turbo
 frontend/.lighthouseci/
 frontend/performance/reports/lighthouse/
+backend/performance/reports/query-plans/
 
 # IDE
 .idea/

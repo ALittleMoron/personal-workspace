@@ -86,9 +86,6 @@ x-frontend-build: &frontend-build
     - /tmp:mode=1777,uid=1000,gid=1000
   environment:
     - PORT=4000
-    - APP_URL_SCHEMA=${APP_URL_SCHEMA}
-    - APP_DOMAIN=${APP_DOMAIN}
-    - NG_ALLOWED_HOSTS=${APP_DOMAIN}
   restart: unless-stopped
   networks:
     - app-network
@@ -177,11 +174,6 @@ services:
     container_name: my_site_frontend_blue
     environment:
       - PORT=4000
-      - APP_URL_SCHEMA=${APP_URL_SCHEMA}
-      - APP_DOMAIN=${APP_DOMAIN}
-      - SSR_API_ORIGIN=http://backend-blue:8080
-      - SSR_PUBLIC_ORIGIN=${APP_URL_SCHEMA}://${APP_DOMAIN}
-      - NG_ALLOWED_HOSTS=${APP_DOMAIN}
     healthcheck: *frontend-healthcheck
 
   frontend-green:
@@ -189,11 +181,6 @@ services:
     container_name: my_site_frontend_green
     environment:
       - PORT=4000
-      - APP_URL_SCHEMA=${APP_URL_SCHEMA}
-      - APP_DOMAIN=${APP_DOMAIN}
-      - SSR_API_ORIGIN=http://backend-green:8080
-      - SSR_PUBLIC_ORIGIN=${APP_URL_SCHEMA}://${APP_DOMAIN}
-      - NG_ALLOWED_HOSTS=${APP_DOMAIN}
     healthcheck: *frontend-healthcheck
 
   valkey:

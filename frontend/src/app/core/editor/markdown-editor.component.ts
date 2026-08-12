@@ -52,7 +52,6 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { ModalPageScrollLockService } from '../layout/modal-page-scroll-lock.service';
 import { WikiLinkRendererService } from '../wiki-links/wiki-link-renderer.service';
 import { WikiLinkTargetsService } from '../wiki-links/wiki-link-targets.service';
-import { parseWikiLinks, wikiLinkPath } from '../wiki-links/wiki-links';
 import {
   MARKDOWN_EDITOR_COMMANDS,
   MARKDOWN_EDITOR_SHORTCUT_GROUPS,
@@ -607,33 +606,6 @@ export class MarkdownEditorComponent implements AfterViewInit, AfterViewChecked,
     this.pendingImageInsertionPosition = null;
     this.queueImageUploads(Array.from(input.files ?? []), insertionPosition);
     input.value = '';
-  }
-
-  onPreviewClick(event: MouseEvent): void {
-    const browserWindow = this.document.defaultView;
-    if (
-      !isPlatformBrowser(this.platformId) ||
-      browserWindow === null ||
-      !(event.target instanceof browserWindow.Element)
-    ) {
-      return;
-    }
-    const anchor = event.target.closest('a');
-    const href = anchor?.getAttribute('href');
-    if (href === null || href === undefined) {
-      return;
-    }
-    const wikiLinkPaths = new Set(
-      parseWikiLinks(this.internalValue()).map((link) =>
-        wikiLinkPath(link.type, link.slug, this.language()),
-      ),
-    );
-    if (!wikiLinkPaths.has(href)) {
-      return;
-    }
-
-    event.preventDefault();
-    browserWindow.open(href, '_blank', 'noopener,noreferrer');
   }
 
   retryUpload(id: number): void {

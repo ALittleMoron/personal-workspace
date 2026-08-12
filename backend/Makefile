@@ -1,6 +1,7 @@
 TEST_ENV_FILE ?= ../.env.test
 TEST_ENV_OVERRIDES ?=
 QUERY_PLANS_ENV_FILE ?= ../.env.test
+QUERY_PLAN_BASELINE_PATH ?= performance/query_plans/realistic-baseline.json
 
 .PHONY: install
 install:
@@ -126,3 +127,21 @@ tests-coverage:
 .PHONY: quality
 quality:
 	bash scripts/quality.sh quality "$(TEST_ENV_FILE)" "$(TEST_ENV_OVERRIDES)"
+
+.PHONY: query-plans-realistic
+query-plans-realistic:
+	bash scripts/run_query_plans.sh \
+		realistic \
+		"$(QUERY_PLANS_ENV_FILE)" \
+		"$(QUERY_PLAN_BASELINE_PATH)"
+
+.PHONY: query-plans-baseline-candidate
+query-plans-baseline-candidate:
+	bash scripts/build_query_plan_baseline.sh \
+		"$(QUERY_PLAN_BASELINE_SOURCE_SHA)" \
+		"$(QUERY_PLAN_BASELINE_OUTPUT)" \
+		"$(QUERY_PLAN_BASELINE_SUMMARY_1)" \
+		"$(QUERY_PLAN_BASELINE_SUMMARY_2)" \
+		"$(QUERY_PLAN_BASELINE_SUMMARY_3)" \
+		"$(QUERY_PLAN_BASELINE_SUMMARY_4)" \
+		"$(QUERY_PLAN_BASELINE_SUMMARY_5)"

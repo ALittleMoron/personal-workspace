@@ -76,11 +76,10 @@ issue_certificates() {
         --non-interactive \
         --no-eff-email \
         --keep-until-expiring \
-        --expand \
+        --renew-with-new-domains \
         --cert-name "$APP_DOMAIN" \
         -d "$APP_DOMAIN" \
-        -d "s3.${APP_DOMAIN}" \
-        -d "agent.${APP_DOMAIN}"
+        -d "s3.${APP_DOMAIN}"
     sync_certificates
     reload_nginx_if_running
 }

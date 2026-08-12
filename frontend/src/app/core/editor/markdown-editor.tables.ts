@@ -3282,13 +3282,13 @@ function tableByFrom(state: EditorState, from: number): TableLayout | null {
 }
 
 function findTableLayouts(state: EditorState): readonly TableLayout[] {
-  return findTableLayoutsInTree(state, syntaxTree(state));
-}
-
-function findProtectedTableLayouts(state: EditorState): readonly TableLayout[] {
   const tree =
     ensureSyntaxTree(state, state.doc.length, TABLE_SYNTAX_TREE_TIMEOUT_MS) ?? syntaxTree(state);
   return findTableLayoutsInTree(state, tree);
+}
+
+function findProtectedTableLayouts(state: EditorState): readonly TableLayout[] {
+  return findTableLayouts(state);
 }
 
 function findTableLayoutsInTree(state: EditorState, tree: Tree): readonly TableLayout[] {

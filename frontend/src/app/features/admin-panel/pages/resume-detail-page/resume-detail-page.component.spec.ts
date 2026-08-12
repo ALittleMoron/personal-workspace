@@ -305,7 +305,9 @@ describe('AdminResumeDetailPageComponent', () => {
 
     expect(elementValueById('resume-experience-0-highlight-0')).toBe('Ускорил сервис');
     expect(elementValueById('resume-experience-0-technology-0')).toBe('Python');
-    expect(elementValueById('resume-experience-0-project-0-highlight-0')).toBe('Гибридный SSR/CSR');
+    expect(elementValueById('resume-experience-0-project-0-highlight-0')).toBe(
+      'Статическая CSR SPA',
+    );
     expect(elementValueById('resume-experience-0-project-0-technology-0')).toBe('Litestar');
     expect(fixture.nativeElement.querySelector('#resume-experience-0-highlights')).toBeNull();
     expect(
@@ -1545,7 +1547,7 @@ function resume(overrides: Partial<Resume> = {}): Resume {
               name: 'Портфолио',
               role: 'Автор',
               description: 'Сайт и база знаний',
-              highlights: ['Гибридный SSR/CSR'],
+              highlights: ['Статическая CSR SPA'],
               technologies: ['Litestar'],
               url: 'https://example.com',
             },

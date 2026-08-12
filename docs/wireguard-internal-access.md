@@ -1,51 +1,33 @@
-# WireGuard Internal Access
+# WireGuard internal access
 
-This project uses host-level WireGuard to reach maintainer-only web panels without
-publishing those panels on public HTTPS subdomains.
+WireGuard provides host-level access to maintainer-only web panels without publishing them on public
+HTTPS subdomains. The current panels are MinIO Console and Databasus.
 
-## Runtime Contract
+## Runtime contract
 
-Public ingress:
+Public ingress is `80/tcp`, `443/tcp` and one chosen WireGuard UDP port. nginx binds the panels to
+`VPN_BIND_ADDRESS` only:
 
-- `80/tcp` and `443/tcp` for the edge nginx public site, API, sitemap, robots.txt,
-  and public MinIO object endpoint.
-- One chosen WireGuard UDP port on the host, for example `51820/udp`.
+- MinIO Console: `http://<VPN_BIND_ADDRESS>:18081`
+- Databasus: `http://<VPN_BIND_ADDRESS>:18082`
 
-VPN-only ingress:
+For production, `VPN_BIND_ADDRESS` is the server address on `wg0`; `.env.example` uses
+`127.0.0.1` so local development remains safe without WireGuard. No application service publishes a
+Docker port directly.
 
-The production value of `VPN_BIND_ADDRESS` must be the server address on `wg0`,
-for example `10.77.0.1`. The `.env.example` value uses `127.0.0.1` so local
-development remains safe when WireGuard is not configured.
+## Host setup
 
-There is no separate process or database-role containment. Backend compromise, SQL injection, or
-erroneous arbitrary SQL has the main backend role's database blast radius and can expose unrelated
-backend secrets or affect public/admin availability. A compromised service that can reach the
-backend on the private application network can forge the forwarded certificate header, so private
-network isolation and the nginx-to-backend trust assumption are required controls.
-
-PostgreSQL, Valkey, backend, frontend, MinIO, and Databasus must not publish
-their own Docker ports. nginx remains the only compose service with public port
-mappings.
-
-## Host Setup
-
-Install WireGuard on the production host:
+Install WireGuard and generate keys outside the repository:
 
 ```bash
 sudo apt update
 sudo apt install wireguard
-```
-
-Generate keys on the host. Keep private keys out of the repository and out of
-logs:
-
-```bash
 umask 077
 wg genkey | tee server.private | wg pubkey > server.public
 wg genkey | tee maintainer-laptop.private | wg pubkey > maintainer-laptop.public
 ```
 
-Create `/etc/wireguard/wg0.conf` on the server:
+Create `/etc/wireguard/wg0.conf` on the server, adapting addresses and port:
 
 ```ini
 [Interface]
@@ -59,7 +41,7 @@ PublicKey = <maintainer laptop public key>
 AllowedIPs = 10.77.0.2/32
 ```
 
-Protect the server config and start WireGuard:
+Protect and enable it:
 
 ```bash
 sudo chown root:root /etc/wireguard/wg0.conf
@@ -68,29 +50,14 @@ sudo systemctl enable --now wg-quick@wg0
 sudo wg show
 ```
 
-Create the maintainer client config on the maintainer device:
+On the maintainer device, use a peer configuration whose `AllowedIPs` includes only the server VPN
+address. Do not route the full internet connection, Docker subnet, PostgreSQL or Valkey through this
+VPN unless a separately reviewed network design requires it.
 
-```ini
-[Interface]
-Address = 10.77.0.2/32
-PrivateKey = <maintainer laptop private key>
+## Firewall and deployment
 
-[Peer]
-PublicKey = <server public key>
-Endpoint = <server public IP or domain>:51820
-AllowedIPs = 10.77.0.1/32
-PersistentKeepalive = 25
-```
-
-`AllowedIPs` intentionally includes only the server VPN address. Do not route
-the maintainer's full internet traffic, Docker subnet, PostgreSQL, or Valkey
-through this VPN.
-
-## Firewall Baseline
-
-For a UFW-managed host, keep public ingress narrow and replace `51820` with the
-chosen WireGuard UDP port. Before enabling UFW, keep an SSH rule that matches
-the current server access policy, or run the change from a provider console:
+Keep a rule for the chosen SSH access path before enabling a restrictive firewall. For UFW, adapt
+the addresses and port:
 
 ```bash
 sudo ufw default deny incoming
@@ -101,61 +68,46 @@ sudo ufw allow 443/tcp
 sudo ufw allow 51820/udp
 sudo ufw allow in on wg0 to 10.77.0.1 port 18081 proto tcp
 sudo ufw allow in on wg0 to 10.77.0.1 port 18082 proto tcp
-sudo ufw allow in on wg0 to 10.77.0.1 port 18083 proto tcp
 sudo ufw enable
 sudo ufw status verbose
 ```
 
-Do not allow `18081/tcp`, `18082/tcp`, or `18083/tcp` on the public interface. Docker also
-binds those ports to `VPN_BIND_ADDRESS`, so they should not listen on the
-server's public IP.
-
-Because Docker publishes ports by adding host firewall/NAT rules, host-level
-firewall policy remains part of the security boundary. On hosts with IPv4
-forwarding enabled, verify from a network that is not connected to WireGuard
-that `18081/tcp`, `18082/tcp`, and `18083/tcp` fail to connect on the public address. If they
-connect, add explicit public-interface drops in the host firewall before the
-Docker accept path, for example through UFW rules that deny those ports on the
-public interface or equivalent `DOCKER-USER` chain rules managed by the host.
-Keep SSH restricted to trusted admin source addresses or move it behind a
-separate access path; a globally reachable `22/tcp` does not satisfy the
-public-ingress contract above.
-
-## Deployment
-
-Set the GitHub Actions Environment `production` variable `VPN_BIND_ADDRESS` to
-the server's WireGuard address, for example `10.77.0.1`. The deploy job runs
-only from the manual **Deploy to production** workflow on `main`. It waits for
-`production` environment approval before rendering `VPN_BIND_ADDRESS` into the
-runtime `.env` from the environment manifest and restarting Docker Compose.
-
-After deployment, inspect the nginx bindings on the host:
+Set the GitHub `production` Environment variable `VPN_BIND_ADDRESS` to the server `wg0` address.
+After deployment inspect bindings:
 
 ```bash
 docker compose ps nginx
-sudo ss -lntp | grep -E ':(80|443|18081|18082|18083)\b'
+sudo ss -lntp | grep -E ':(80|443|18081|18082)\b'
 ```
 
-Expected result:
+`80` and `443` should be public; `18081` and `18082` must bind only to the VPN address. Because
+Docker installs host NAT/firewall rules, test from a network that is not on WireGuard. If a panel is
+reachable publicly, add explicit public-interface drops before Docker's accept path (for example
+through host-managed UFW or `DOCKER-USER` policy) and re-test.
 
-## Peer Revocation
+## Revocation and acceptance checks
 
-To revoke a maintainer device:
+To revoke a device, remove its peer from `/etc/wireguard/wg0.conf`, remove it from the live
+interface, then verify it cannot reach either panel:
 
-1. Remove that peer block from `/etc/wireguard/wg0.conf`.
-2. Remove it from the live interface:
+```bash
+sudo wg set wg0 peer <revoked peer public key> remove
+sudo wg show
+```
 
-   ```bash
-   sudo wg set wg0 peer <revoked peer public key> remove
-   sudo wg show
-   ```
+From a public network without WireGuard, both must fail to connect:
 
-3. Verify the revoked device can no longer reach:
+```bash
+curl --connect-timeout 3 http://<server public IP>:18081
+curl --connect-timeout 3 http://<server public IP>:18082
+```
 
-## Acceptance Checks
-
-From a public network without WireGuard:
-
-From the maintainer device while connected to WireGuard:
+From a connected maintainer device, the corresponding VPN-address requests should reach the panel
+login surfaces. Panel authentication remains necessary; WireGuard is network access control, not an
+application identity substitute.
 
 ## References
+
+- [WireGuard Quick Start](https://www.wireguard.com/quickstart/)
+- [Docker port publishing](https://docs.docker.com/engine/network/port-publishing/)
+- [UFW documentation](https://help.ubuntu.com/community/UFW)

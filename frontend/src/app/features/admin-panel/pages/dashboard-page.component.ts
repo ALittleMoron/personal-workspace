@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -32,13 +33,15 @@ interface DashboardTabDefinition {
   labelKey: string;
 }
 
-const MANAGER_DASHBOARD_TABS: readonly DashboardTabDefinition[] = [
+const DASHBOARD_COLLAPSED_SECTIONS_STORAGE_KEY = 'dashboardCollapsedSections';
+
+const DASHBOARD_TABS: readonly DashboardTabDefinition[] = [
   { key: 'home', labelKey: 'dashboard.home.title' },
   { key: 'month-calendar', labelKey: 'dashboard.calendar.title' },
   { key: 'tools', labelKey: 'dashboard.tools.title' },
 ];
 
-const MANAGER_DASHBOARD_SECTIONS: readonly DashboardSectionKey[] = [
+const DASHBOARD_SECTIONS: readonly DashboardSectionKey[] = [
   'upcoming-dates',
   'month-calendar',
   'tools',
@@ -65,6 +68,7 @@ export class DashboardPageComponent implements OnInit {
   private readonly calendarService = inject(CalendarService);
   private readonly i18n = inject(I18nService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
   private upcomingLoadGeneration = 0;
 
   @ViewChild(MonthCalendarWidgetComponent)
@@ -78,9 +82,11 @@ export class DashboardPageComponent implements OnInit {
   readonly monthCalendarSummary = signal<string | null>(null);
   readonly toolsStatusSummary = signal<string | null>(null);
   readonly activeTab = signal<DashboardTabKey>('home');
-  readonly tabs = signal<readonly DashboardTabDefinition[]>(MANAGER_DASHBOARD_TABS);
-  readonly collapsedSectionKeys = signal<ReadonlySet<string>>(new Set<string>());
-  readonly knownSectionKeys = signal<readonly DashboardSectionKey[]>(MANAGER_DASHBOARD_SECTIONS);
+  readonly tabs = signal<readonly DashboardTabDefinition[]>(DASHBOARD_TABS);
+  readonly collapsedSectionKeys = signal<ReadonlySet<DashboardSectionKey>>(
+    this.loadCollapsedSectionKeys(),
+  );
+  readonly knownSectionKeys = signal<readonly DashboardSectionKey[]>(DASHBOARD_SECTIONS);
   readonly datesSummary = computed(() => {
     this.i18n.language();
     const summary = this.upcomingCalendar()?.summary;
@@ -131,15 +137,14 @@ export class DashboardPageComponent implements OnInit {
 
   setSectionExpanded(sectionKey: DashboardSectionKey, expanded: boolean): void {
     if (!this.knownSectionKeys().includes(sectionKey)) return;
-    this.collapsedSectionKeys.update((current) => {
-      const next = new Set(current);
-      if (expanded) {
-        next.delete(sectionKey);
-      } else {
-        next.add(sectionKey);
-      }
-      return next;
-    });
+    const next = new Set(this.collapsedSectionKeys());
+    if (expanded) {
+      next.delete(sectionKey);
+    } else {
+      next.add(sectionKey);
+    }
+    this.collapsedSectionKeys.set(next);
+    this.persistCollapsedSectionKeys(next);
   }
 
   setActiveTab(tabKey: DashboardTabKey): void {
@@ -185,6 +190,37 @@ export class DashboardPageComponent implements OnInit {
     }
     return items;
   }
+
+  private loadCollapsedSectionKeys(): ReadonlySet<DashboardSectionKey> {
+    try {
+      const storedValue = this.storage()?.getItem(DASHBOARD_COLLAPSED_SECTIONS_STORAGE_KEY);
+      if (storedValue === null || storedValue === undefined) return new Set<DashboardSectionKey>();
+      const parsedValue: unknown = JSON.parse(storedValue);
+      if (!Array.isArray(parsedValue)) return new Set<DashboardSectionKey>();
+      return new Set(parsedValue.filter(isDashboardSectionKey));
+    } catch {
+      return new Set<DashboardSectionKey>();
+    }
+  }
+
+  private storage(): Storage | null {
+    return this.document.defaultView?.localStorage ?? null;
+  }
+
+  private persistCollapsedSectionKeys(sectionKeys: ReadonlySet<DashboardSectionKey>): void {
+    try {
+      this.storage()?.setItem(
+        DASHBOARD_COLLAPSED_SECTIONS_STORAGE_KEY,
+        JSON.stringify([...sectionKeys]),
+      );
+    } catch {
+      return;
+    }
+  }
+}
+
+function isDashboardSectionKey(value: unknown): value is DashboardSectionKey {
+  return typeof value === 'string' && DASHBOARD_SECTIONS.some((sectionKey) => sectionKey === value);
 }
 
 function browserLocalDate(value: Date): string {

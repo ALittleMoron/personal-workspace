@@ -93,6 +93,20 @@ app-markdown-editor.is-invalid .markdown-editor-shell {
   overflow-wrap: anywhere;
 }
 
+.rendered-markdown :is(table, pre) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.rendered-markdown table {
+  display: block;
+}
+
+.rendered-markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
 .markdown-editor-status {
   padding: 0 0.75rem;
 }

@@ -16,6 +16,7 @@ case "$action" in
         ;;
     test)
         ensure_frontend_deps
+        node --test scripts/lighthouse_report_verifier.test.mjs
         npm test -- --watchAll=false
         ;;
     test-watch)
@@ -53,6 +54,10 @@ case "$action" in
     build)
         ensure_frontend_deps
         npm run build
+        ;;
+    lighthouse)
+        ensure_frontend_deps
+        bash "$script_dir/lighthouse_task.sh"
         ;;
     quality)
         bash "$script_dir/npm_task.sh" format

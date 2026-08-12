@@ -37,8 +37,8 @@ class TestSettings:
         assert self.settings.app.public_origin == "https://alittlemoron.ru"
 
     def test_app_get_url(self) -> None:
-        assert (
-            self.settings.app.get_url(path="/sitemap.xml") == "https://alittlemoron.ru/sitemap.xml"
+        assert self.settings.app.get_url(path="/api/healthcheck/ready") == (
+            "https://alittlemoron.ru/api/healthcheck/ready"
         )
 
     def test_minio_region(self) -> None:

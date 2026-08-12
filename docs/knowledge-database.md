@@ -1,132 +1,100 @@
 # Knowledge Database
 
-The knowledge database is a private owner/admin workspace. Its first typed item workspaces are
-People and Dates. The common item, taxonomy, file, and access boundaries remain reusable for future
-knowledge types. It is not a public content API and is not part of Angular SSR.
+Knowledge is a private administrator workspace. Its current typed item workspaces are People and
+Dates. It is not a public content API; all of its browser UI is Angular CSR.
 
-## Architecture
+## Model and boundaries
 
-The model uses a typed extension pattern:
+The clean `0001_initial_schema.py` migration creates the current schema for a fresh deployment.
+`KnowledgeItem` owns common identity, type, author username, display name, description, tags and
+timestamps. `PersonDetails` and `KnowledgeDateDetails` are required typed one-to-one extensions.
+Dates own their links to People; People expose the resulting `relatedDates` backlinks. Person
+relationships and their types are normalized, author-scoped records.
 
-Knowledge code is physically partitioned by ownership:
+`FileModel` is the canonical metadata record for every stored file. `KnowledgeItemFileModel` links
+it to its Knowledge owner and records the Knowledge file kind and processing provenance. The
+association foreign keys use `RESTRICT`; deletion locks the canonical row, removes the association,
+checks registered uses and removes metadata and object bytes only when no use remains. Namespace
+checks prevent a `knowledge-private` row from being handled by public `media` storage.
 
-- `core/knowledge/{items,files,people,dates}` contains the matching domain enums, schemas, contracts,
-  services, and use cases.
-- `entrypoints/litestar/api/knowledge/{items,files,people,dates}` contains transport schemas and
-  controllers; `knowledge/router.py` only composes those controllers.
-- `infra/postgresql/{models,storages}/knowledge/{items,files,people,dates}` and
-  `infra/ioc/prodivers/knowledge/` mirror the same boundaries.
+Code follows the same ownership split in `core/knowledge/{items,files,people,dates}`,
+`entrypoints/litestar/api/knowledge/{items,files,people,dates}`, and the matching PostgreSQL
+models, storages and providers. A future item type needs its own typed extension and feature facade;
+do not substitute a JSON/EAV field bag or a universal dynamic form.
 
-Future item types should add their own typed one-to-one extension and feature facade. A universal
-JSON/EAV field bag or a universal dynamic form renderer would discard database constraints,
-searchability, type safety, and explicit product behavior, so it is not the extension mechanism.
+## Access and API
 
-## PostgreSQL Model
+Knowledge controllers live below `/api/admin/knowledge/*`, are excluded from OpenAPI and send
+`Cache-Control: no-store`. The whole `/api/admin/*` router currently requires a verified
+request-scope `VerifiedAdminIdentity`; absent or malformed identity is rejected. The planned
+authenticator will configure one administrator through the environment and will not introduce
+account or team tables.
 
-The clean `0001_initial_schema.py` migration creates the complete current schema for a fresh
-deployment. `FileModel` is the canonical metadata table for every stored file, including future
-Resume and other domain usages. Knowledge does not duplicate that metadata. Instead,
-`KnowledgeItemFileModel` links a file to its owning item and records the Knowledge-specific kind and
-processing provenance.
+| Area | Current API |
+| --- | --- |
+| People | CRUD at `/people`, relationship-type CRUD at `/people/relationship-types`, protected photo replacement/removal at `/people/{personId}/photo`. |
+| Dates | CRUD at `/dates`; list supports search, AND-tag and related-Person filters and calendar/update/name ordering. |
+| Tags | List/search and create at `/tags`; rename/delete at `/tags/{tagId}`. |
+| Files | Attachments at `/items/{itemId}/attachments`, normalized Markdown images at `/items/{itemId}/editor-images`, and protected streaming at `/files/{fileId}/content`. |
 
-Both association foreign keys use `RESTRICT`. Deleting a Knowledge file locks its canonical file
-row, removes the association, checks all registered usages, and deletes the metadata and object only
-when no usage remains. Shared file operations are namespace-scoped so private `knowledge-private`
-rows cannot appear through the public `media` storage.
+Every use case receives the verified identity's username. IDs, links, taxonomy and file operations
+are author-scoped; an unknown and a foreign-owned ID share the same not-found behavior.
 
-## Admin API
+## Private files and Markdown images
 
-People:
+Private objects are kept only in the `knowledge-private` MinIO bucket through the backend's
+authenticated internal S3 client. Initialization creates the bucket when missing and removes bucket
+policy and CORS. The public `s3.<APP_DOMAIN>` nginx listener returns `404` for both the exact bucket
+path and its prefix. APIs return a protected backend `contentPath`, never an S3 or presigned URL.
 
-Person detail responses also include required `relatedDates` backlinks. Link mutations remain
-Date-owned.
+Photos and editor images accept JPEG, PNG or WebP up to 5 MiB. The backend decodes and validates
+the bytes, rejects animated and decompression-bomb images, applies orientation, bounds dimensions,
+and writes normalized WebP. Attachments accept arbitrary MIME types up to 20 MiB and are sent as
+downloads. An editor image is an ordinary attachment whose persisted
+`normalizedRasterImage` provenance permits inline image serving; raw attachments remain downloads.
 
-Dates:
+The editor-image endpoint is the only supported inline-upload route for private Knowledge Markdown.
+The Angular workspace fetches protected content as a blob, uses short-lived object URLs for previews
+and revokes them after replacement, errors, navigation and destruction. Removing a Markdown
+reference does not delete its attachment.
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/admin/knowledge/dates` | Paginated search, AND-tag and Person filters, plus calendar/update/name sorting. |
-| `POST` | `/api/admin/knowledge/dates` | Quick-create from a display name and annual date. |
-| `GET` | `/api/admin/knowledge/dates/{dateId}` | Full date, tags, related People, private attachments, and timestamps. |
-| `PUT` | `/api/admin/knowledge/dates/{dateId}` | Replace the date, description, tags, and People links. |
-| `DELETE` | `/api/admin/knowledge/dates/{dateId}` | Delete the Date graph and schedule attachment cleanup after commit. |
+Object replacement/deletion is transaction-owned: obsolete object names are cleanup actions only
+after commit, while newly uploaded objects are registered for rollback/commit-failure cleanup. That
+cleanup is best effort; a failed cleanup can leave an orphan for operations follow-up but must not
+hide the original request or transaction failure.
 
-Taxonomy and private files:
+## Workspace and calendar
 
-The API returns a protected `contentPath` for file reads, never an S3 URL or presigned URL.
-`POST /api/admin/knowledge/items/{itemId}/editor-images` accepts private Markdown images. The result
-uses the ordinary attachment response and remains visible in the item's attachment list.
+Protected CSR routes are `/admin-panel/knowledge/people`,
+`/admin-panel/knowledge/people/:id`, `/admin-panel/knowledge/dates`, and
+`/admin-panel/knowledge/dates/:id`. They use explicit typed forms rather than a schema-driven form
+renderer. `/admin-panel/dashboard` composes its Calendar and operational-tools widgets without
+owning their business logic; see [Calendar](calendar.md).
 
-The `/api/admin` tree is fail-closed and accepts only a verified request-scope identity. The planned
-authenticator has one administrator configured through the environment; it does not require user,
-team, or role tables.
+## Operations and recovery
 
-## Private Files
+`make run` starts a one-shot backend initializer that creates the public `media` and private
+`knowledge-private` buckets. After a deploy or restore:
 
-Photos accept JPEG, PNG, or WebP up to 5 MiB. Pillow fully decodes the supplied bytes, verifies that
-the detected type matches the declared MIME type, rejects animated images and decompression-bomb
-warnings/errors, rejects source dimensions above the explicit pixel limit before full decode,
-applies EXIF orientation, bounds the image to 2048×2048, and always writes WebP.
-Attachments accept arbitrary MIME types up to 20 MiB and are served as downloads rather than
-trusted active content. Each upload route has a request-body limit equal to its advertised file
-limit plus bounded multipart overhead, and the backend reads at most the file limit plus one byte
-before applying the core size rule. Persisted original names and MIME types are capped at 255
-characters.
+1. Check backend readiness and successful bucket initialization.
+2. In the VPN-only MinIO Console, verify that `knowledge-private` has neither anonymous policy nor
+   bucket CORS.
+3. From a public network, verify that `https://s3.<APP_DOMAIN>/knowledge-private` and a child path
+   return `404`.
+4. Once authentication is available, exercise a protected photo, attachment and editor image;
+   confirm the image has a Blob preview and remains an attachment after its Markdown reference is
+   removed.
+5. Confirm Knowledge controllers remain absent from `/api/docs/openapi.json` and responses use
+   `no-store`.
 
-Markdown editor images follow the photo validation and normalization path but are persisted as
-ordinary attachments. Their association also records `normalizedRasterImage` provenance. Only an
-attachment with that persisted provenance and the normalized `image/webp` type may be served inline;
-raw attachments remain downloads even if their filename, path, or declared MIME resembles an editor
-image. Removing an image reference from Markdown does not remove the attachment, so it remains
-available for later reuse.
+PostgreSQL and `knowledge-private` form one recovery set because database records contain object
+paths. Back up both with the same recovery-point identifier; keep backups encrypted,
+access-controlled and non-public. Restore to an isolated environment first, then run normal
+migrations and bucket initialization, reconcile metadata against objects, sample authorized reads,
+and repeat the public exact/prefix `404` checks. Record the recovery point, duration, integrity
+findings and cleanup exceptions. Automated private-bucket backup/restore and recurring restore
+exercises remain roadmap work; a backup is not proven recoverable until an isolated restore passes.
 
-Database deletion is transaction-owned. Replaced/deleted object names are registered as
-post-commit cleanup actions, so rollback cannot remove still-referenced data. Cleanup is best
-effort and logs only bucket-level outcome/counts, not private object content. Newly uploaded objects
-are separately registered for request rollback and commit-failure cleanup, while successful commit
-discards those rollback actions. A failed cleanup can still leave an orphan and needs operational
-follow-up; it must not replace the original request/commit error or turn a committed database
-mutation into a misleading client failure.
-
-## Angular Workspaces And Dashboard
-
-The lazy CSR routes are:
-
-Knowledge file sizes use the smallest meaningful localized unit: bytes below 1 KiB, kilobytes below
-1 MiB, then megabytes, gigabytes, and terabytes.
-
-The workspace uses explicit typed forms and feature models. It does not render a schema-driven
-universal form. Protected photos are fetched as blobs and displayed through short-lived browser
-object URLs; old URLs are revoked on replacement, navigation, errors, and component destruction.
-The shared Markdown editor accepts a domain-neutral image capability. People and Dates bind it to
-the private item-scoped upload API, insert a protected file reference into Markdown, and fetch
-preview bytes through authenticated Blob requests. Protected backend paths never become live image
-sources. Preview object URLs are revoked on content or language changes, errors, replacement, and
-component destruction. Save is gated while uploads are queued or active, while saving temporarily
-disables new uploads. A shared locale-aware annual-date formatter renders day/month values with or
-without the optional year in both workspaces.
-
-## Operations
-
-`make run` invokes backend initialization, which initializes both the public `media` bucket and the
-private `knowledge-private` bucket. After a deployment:
-
-1. Confirm backend readiness and that initialization completed without an S3 error.
-2. In the VPN-only MinIO Console, confirm `knowledge-private` exists and has no anonymous policy
-   and no bucket CORS configuration.
-3. From the public side, confirm both
-   `https://s3.<APP_DOMAIN>/knowledge-private` and a path below it return `404`.
-4. As an owner/admin, upload and download a small photo and attachment through the People UI and an
-   attachment through Dates. Paste or select one Markdown image in each editor, confirm its private
-   Blob preview and ordinary attachment entry, then remove only the Markdown reference and confirm
-   the attachment remains. Confirm explicit replacement/deletion removes obsolete objects only
-   after the request commits.
-5. Confirm the knowledge controllers are absent from `/api/docs/openapi.json` and private responses
-   carry `no-store`.
-
-## Backup And Restore
-
-For recovery, restore to an isolated environment first:
-
-Automated private-bucket backup/restore and recurring restore tests remain roadmap work. Until a
-restore exercise passes, the existence of backups is not a recovery guarantee.
+Run `make security-infra`, `make query-plans-realistic`, and the relevant backend/frontend Make
+targets after changing this contour. The query-plan gate covers retained Knowledge and Resume
+storage queries.

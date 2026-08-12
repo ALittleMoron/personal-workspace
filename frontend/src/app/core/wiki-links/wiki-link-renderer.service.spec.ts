@@ -15,7 +15,7 @@ describe('WikiLinkRendererService', () => {
     jest.restoreAllMocks();
   });
 
-  it('renders typed wiki links as sanitized localized internal links', () => {
+  it('keeps removed typed wiki-link syntax inert while sanitizing HTML', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const html = service.render(
@@ -23,7 +23,8 @@ describe('WikiLinkRendererService', () => {
       'en',
     );
 
-    expect(html).toContain('<a href="/en/articles/typed-articles">typed article</a>');
+    expect(html).toContain('[[articles:typed-articles|typed article]]');
+    expect(html).not.toContain('/articles/');
     expect(html).not.toContain('onerror');
     expect(warnSpy).toHaveBeenCalled();
   });

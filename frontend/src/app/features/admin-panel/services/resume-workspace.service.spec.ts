@@ -204,7 +204,7 @@ function resumeContent(): ResumePayload['content'] {
             name: 'Portfolio',
             role: 'Creator',
             description: 'Site and knowledge base',
-            highlights: ['Hybrid SSR/CSR'],
+            highlights: ['CSR SPA shell'],
             technologies: ['Litestar'],
             url: 'https://example.com',
           },

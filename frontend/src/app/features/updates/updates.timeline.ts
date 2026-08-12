@@ -15,8 +15,7 @@ export type UpdateTagId =
   | 'infra'
   | 'localization'
   | 'quality'
-  | 'security'
-  | 'seo';
+  | 'security';
 
 export interface UpdateTimelineEntry {
   readonly id: string;
@@ -51,7 +50,6 @@ const UPDATE_TAG_I18N_KEYS: Readonly<Record<UpdateTagId, string>> = {
   localization: 'updates.tag.localization',
   quality: 'updates.tag.quality',
   security: 'updates.tag.security',
-  seo: 'updates.tag.seo',
 };
 
 export const UPDATES_TIMELINE_ENTRIES: readonly UpdateTimelineEntry[] = [
@@ -71,7 +69,7 @@ export const UPDATES_TIMELINE_ENTRIES: readonly UpdateTimelineEntry[] = [
         'The site gained an updates page with compressed site history focused on major ' +
         'milestones: public content, admin workflows, quality, security, and infrastructure.',
     },
-    tagIds: ['content', 'frontend', 'backend', 'seo'],
+    tagIds: ['content', 'frontend', 'backend'],
   },
   {
     id: 'release-workflow',

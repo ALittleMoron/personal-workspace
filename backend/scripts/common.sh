@@ -16,17 +16,32 @@ require_uv() {
 
 ensure_backend_deps() {
     local marker=".venv/.self-contained-all-groups"
+    local expected_entrypoint_prefix="#!${backend_dir}/.venv/bin/"
+    local installed_entrypoint_prefix=""
+    local reinstall_entrypoints=false
 
     require_uv
+
+    if [ -f .venv/bin/pip-audit ]; then
+        IFS= read -r installed_entrypoint_prefix < .venv/bin/pip-audit
+        if [[ "$installed_entrypoint_prefix" != "$expected_entrypoint_prefix"* ]]; then
+            reinstall_entrypoints=true
+        fi
+    fi
 
     if [ -x .venv/bin/python ] \
         && [ -f "$marker" ] \
         && [ ! pyproject.toml -nt "$marker" ] \
-        && [ ! uv.lock -nt "$marker" ]; then
+        && [ ! uv.lock -nt "$marker" ] \
+        && [ "$reinstall_entrypoints" = false ]; then
         return
     fi
 
-    uv sync --locked --all-groups
+    if [ "$reinstall_entrypoints" = true ]; then
+        uv sync --locked --all-groups --reinstall
+    else
+        uv sync --locked --all-groups
+    fi
     mkdir -p .venv
     touch "$marker"
 }

@@ -106,14 +106,6 @@ server {
         proxy_pass http://backend/api/;
     }
 
-    location = /sitemap.xml {
-        proxy_pass http://backend/sitemap.xml;
-    }
-
-    location = /robots.txt {
-        proxy_pass http://backend/robots.txt;
-    }
-
     location / {
         proxy_pass http://frontend;
     }

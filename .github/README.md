@@ -3,84 +3,89 @@
 [🇷🇺 Russian version](./README_RU.md)
 
 | Category | Technologies |
-|----------|--------------|
+| --- | --- |
 | Coverage | ![coverage-backend](./badges/coverage-backend.svg) ![coverage-frontend](./badges/coverage-frontend.svg) |
-| Backend | ![python](./badges/python.svg) ![litestar](./badges/litestar.svg) ![async](./badges/async.svg) ![pydantic](./badges/pydantic.svg) ![dishka](./badges/dishka.svg) ![taskiq](./badges/taskiq.svg) ![paseto](./badges/paseto.svg) ![argon2](./badges/argon2.svg) ![mcp](./badges/mcp.svg) |
+| Backend | ![python](./badges/python.svg) ![litestar](./badges/litestar.svg) ![async](./badges/async.svg) ![pydantic](./badges/pydantic.svg) ![dishka](./badges/dishka.svg) ![taskiq](./badges/taskiq.svg) ![paseto](./badges/paseto.svg) ![argon2](./badges/argon2.svg) |
 | Database | ![postgresql](./badges/postgresql.svg) ![sqlalchemy](./badges/sqlalchemy.svg) ![alembic](./badges/alembic.svg) |
 | Cache | ![valkey](./badges/valkey.svg) |
 | Frontend | ![angular](./badges/angular.svg) ![typescript](./badges/typescript.svg) ![bootstrap](./badges/bootstrap.svg) |
 | Testing | ![pytest](./badges/pytest.svg) ![jest](./badges/jest.svg) ![lhci](./badges/lhci.svg) |
 | DevOps | ![docker](./badges/docker.svg) ![nginx](./badges/nginx.svg) ![minio](./badges/minio.svg) ![docker-compose](./badges/docker-compose.svg) |
 | Quality | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
-| Logging | ![structlog](./badges/structlog.svg) ![ecs-logging](./badges/ecs-logging.svg) ![sentry](./badges/sentry.svg) |
-| Architecture | ![clean-architecture](./badges/clean-architecture.svg) ![type-safe](./badges/type-safe.svg) |
-| Tools | ![uv](./badges/uv.svg) ![granian](./badges/granian.svg) ![node](./badges/node.svg) ![npm](./badges/npm.svg) |
-| CI/CD | ![github-actions](./badges/github-actions.svg) ![dependabot](./badges/dependabot.svg) |
 
-> [!NOTE]
-> Backend coverage — pytest (Python). Frontend coverage — Jest (TypeScript). Both generated in separate CI jobs.
+Portfolio site with a localized public case study and updates, plus a private administrator
+workspace for resumes and the Knowledge database. Authorization is deliberately the next step:
+the current `/api/admin/*` boundary is fail-closed until a verified request identity exists.
 
-## 📖 Documentation
+## Documentation
 
-## 📂 Project Structure
+- [Knowledge database](../docs/knowledge-database.md)
+- [Calendar](../docs/calendar.md)
+- [Production deployment](../docs/production-deploy.md)
+- [Security threat model](../docs/security-threat-model.md)
+- [WireGuard internal access](../docs/wireguard-internal-access.md)
+- [Roadmap](../docs/TODO.md)
 
-## ✨ Features
+## Project structure
 
-## 🚀 Quick Start
-
-1. Clone the repository:
-```bash
-git clone git@github.com:ALittleMoron/my-site.git
-cd my-site
+```text
+my-site/
+├── backend/        # Litestar API, async domain/application code, tests and query-plan gates
+├── frontend/       # Angular CSR application and Node static shell with per-request CSP nonce
+├── infra/          # nginx edge, MinIO wrapper, deployment, TLS and security scripts
+├── docs/           # domain, operations, security and roadmap documentation
+├── docker-compose.yml
+└── .env.example
 ```
 
-2. Create `.env` file:
-```bash
-cp .env.example .env
-```
+nginx is the TLS edge. It proxies `/api/*` to Litestar and all browser navigation to the Node
+static shell. The shell serves Angular's browser build, caches versioned assets, injects the nginx
+CSP nonce into `index.html`, exposes `/healthz`, and returns the SPA shell only for HTML navigation.
 
-3. Create certs for `nginx` (optional for local development):
+## Quick start
 
-The nginx container runs as UID/GID `101:101`, so mounted certificate and private key files must be
-readable by that user. For local `mkcert` files,
-`chmod 644 ./infra/nginx/certs/<file>` is enough; for production, prefer owner/group permissions
-that grant read access only to nginx.
-Production Let's Encrypt issuance and renewal are handled through the compose-backed
-`make certbot-issue`, `make certbot-renew`, and `make certbot-sync` targets. See
-[Production Deploy](../docs/production-deploy.md).
+1. Clone the repository and create local configuration:
 
-4. Update `.env` with your values.
+   ```bash
+   cp .env.example .env
+   ```
 
-5. Run via `Makefile`:
-```bash
-make run
-```
+2. Set every value in `.env`. `IMAGE_TAG` is required by Compose; local development may use an
+   explicit throwaway tag. Keep actual secrets out of Git.
 
-## Local MCP bridge
+3. Provide local TLS certificate files under `infra/nginx/certs/` when using the HTTPS edge. The
+   nginx container needs read access to them. For production, use the documented Let’s Encrypt flow.
 
-## ⚙️ Endpoints
+4. Start the stack:
 
-Local edge nginx redirects HTTP to HTTPS, so use the HTTPS URLs in the browser.
+   ```bash
+   make run
+   ```
+
+## Endpoints
+
+The local nginx edge redirects HTTP to HTTPS.
 
 - Frontend: `https://localhost`
 - API: `https://localhost/api`
-- API liveness: `https://localhost/api/healthcheck`
-- API readiness: `https://localhost/api/healthcheck/ready`
-- API docs: `https://localhost/api/docs`
-- OpenAPI spec: `https://localhost/api/docs/openapi.json`
+- Liveness: `https://localhost/api/healthcheck`
+- Readiness: `https://localhost/api/healthcheck/ready`
+- API documentation: `https://localhost/api/docs`
+- OpenAPI document: `https://localhost/api/docs/openapi.json`
 
-Internal web panels are available only through host-level WireGuard and nginx
-ports bound to `VPN_BIND_ADDRESS`:
+MinIO Console and Databasus are not public. nginx binds them only to `VPN_BIND_ADDRESS` on ports
+`18081` and `18082`; see [WireGuard internal access](../docs/wireguard-internal-access.md).
 
-The production public firewall baseline is `80/tcp`, `443/tcp`, and the chosen
-WireGuard UDP port. See [WireGuard internal access](../docs/wireguard-internal-access.md).
+## Quality gates
 
-See [docker-compose.yml](../docker-compose.yml) for all services.
+Use Make targets rather than invoking the underlying tools directly:
 
-## 🧪 Tests
+```bash
+make tests
+make security
+make query-plans-realistic
+make performance-lighthouse
+```
 
-Backend pytest targets run with an explicit pytest-xdist worker count based on physical CPU cores,
-not `-n auto`. Set `BACKEND_PYTEST_WORKERS=0` or `1` for serial execution, or set any value greater
-than `1` to force that exact worker count. Unit tests run without a test database; integration tests
-clone a migrated run-scoped template into isolated per-worker PostgreSQL databases, while Alembic
-migration tests stay serial against the base test database.
+The query-plan gate exercises current Knowledge and Resume storage queries. Lighthouse evaluates
+the CSR routes for performance, accessibility and best practices.

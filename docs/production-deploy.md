@@ -1,198 +1,112 @@
-# Production Deploy
+# Production deployment
 
-Production deploy is a manual server-build deploy:
+Production is deployed manually from the `main` branch through **Deploy to production**. The
+workflow renders a fresh runtime `.env`, synchronizes the deploy payload, optionally issues a
+certificate, then runs `make run` on the host. Protect the `production` GitHub Environment with
+required reviewers and a `main`-only deployment branch rule.
 
-The post-smoke container security jobs use the same Make targets in CI and locally:
+## Prerequisites and GitHub Environment
+
+The server needs Docker with the Compose plugin, `make`, `curl`, `rsync`, SSH access for the deploy
+user and an enabled Docker service. Keep the host checkout directory private to that user. The
+workflow needs these Environment variables:
+
+- `APP_DEBUG`, `APP_DOMAIN`, `APP_URL_SCHEMA`, `APP_USE_CACHE`, `I18N_DEFAULT_LANGUAGE`;
+- `DB_DRIVER`, `DB_EXPIRE_ON_COMMIT`, `DB_HOST`, `DB_LOG_QUERY_METRICS`, `DB_MAX_OVERFLOW`,
+  `DB_NAME`, `DB_POOL_PRE_PING`, `DB_POOL_SIZE`, `DB_PORT`, `DB_SLOW_QUERY_LOG_STATEMENT_MAX_LENGTH`,
+  `DB_SLOW_QUERY_LOG_THRESHOLD_MS`, `DB_USER`;
+- `FILES_ORPHAN_RETENTION_SECONDS`;
+- `LE_EMAIL`, `SSL_CERT`, `SSL_KEY`, `VPN_BIND_ADDRESS`;
+- `MINIO_CORS_MAX_AGE_SECONDS`, `MINIO_HOST`, `MINIO_PORT`, `MINIO_PUBLIC_URL`, `MINIO_REGION`,
+  `MINIO_SECURE`;
+- `SENTRY_USE`, `TASKIQ_CACHE_WARM_INTERVAL_SECONDS`,
+  `TASKIQ_FILE_ORPHAN_PRUNE_INTERVAL_SECONDS`, `TASKIQ_RESULT_EXPIRE_SECONDS`, `VALKEY_HOST`, and
+  `VALKEY_PORT`;
+- deployment connection variables `REMOTE_HOST`, `REMOTE_PATH`, and `REMOTE_USER`.
+
+Required Environment secrets are `APP_SECRET_KEY`, `DB_PASSWORD`, `MINIO_ACCESS_KEY`,
+`MINIO_SECRET_KEY` and `SSH_PRIVATE_KEY`. `SENTRY_DSN` is a secret that may be deliberately empty.
+`IMAGE_TAG` is computed from the deployed commit; do not add a `latest` fallback. The authoritative
+machine-readable contract is `infra/deploy/runtime-env.manifest.json`.
+
+At runtime Compose materializes application secrets below `.deploy-state/compose-secrets/` and mounts
+them as read-only files under `/run/secrets/*`. Do not put secret values in service `environment` or
+`env_file`, where `docker inspect` can expose them. Do not commit generated `.env`, secret files,
+TLS private keys or production values.
+
+## Network and services
+
+In the normal running stack nginx is the only service with host port mappings: public `80` and
+`443`, plus VPN-bound `18081` (MinIO Console) and `18082` (Databasus). PostgreSQL, Valkey, backend,
+frontend and MinIO remain on the private Compose network. During first issuance or nginx recovery,
+`make certbot-issue` can temporarily run Certbot's standalone HTTP challenge on port 80 when nginx
+is not running; it exits after issuance. See [WireGuard internal access](wireguard-internal-access.md)
+for the host firewall and peer setup.
+
+The stack uses blue/green backend and frontend slots. `make run` brings up dependencies, runs the
+one-shot backend bucket initializer, starts the inactive slot, waits for health checks, switches
+nginx, runs edge smoke checks, records the active slot and drains the previous slot. The Angular
+runtime is CSR-only: the frontend container is a Node static shell with `PORT=4000`, a `/healthz`
+endpoint and per-request CSP nonce substitution.
+
+## TLS
+
+Set `SSL_CERT=/certs/fullchain.pem` and `SSL_KEY=/certs/privkey.pem` for Compose-managed certificate
+sync. Certificates are named for `APP_DOMAIN` and `s3.APP_DOMAIN`. To issue after the public DNS and
+port 80 are ready, select `issue_certificates` in the deploy workflow or run on the host:
 
 ```bash
+make certbot-issue
+```
+
+For regular renewal, schedule the following on the host from the deployed project directory:
+
+```bash
+make certbot-renew
+```
+
+`make certbot-sync` copies existing Certbot material to the nginx certificate mount and reloads a
+running nginx. The nginx runtime user must be able to read the synchronized certificate files.
+
+## Backup and restore
+
+PostgreSQL and MinIO objects are separate backups but one logical recovery point. Back up the
+PostgreSQL volume/database and MinIO data with matching identifiers; include `knowledge-private` as
+well as public `media`. Keep backup storage encrypted, non-public and limited to authorized
+operators. Databasus is a VPN-only administrative panel, not evidence that a backup or restore is
+valid.
+
+Restore only to an isolated environment first:
+
+1. Restore PostgreSQL and MinIO data from the same recovery point.
+2. Run normal migrations and the backend bucket initializer. It must remove any restored policy or
+   CORS configuration from `knowledge-private`.
+3. Reconcile file metadata and object paths; sample public-media and authorized private-file reads.
+4. From a public network, confirm the exact `knowledge-private` path and a child path on the public
+   S3 endpoint return `404`.
+5. Record the recovery point, duration, integrity results, authorization checks and failures before
+   considering production recovery.
+
+Recurring backup automation and restore drills remain roadmap work; stored backups are not a
+recovery guarantee until a documented isolated restore succeeds.
+
+## Validation
+
+Before deploying, use the applicable Make targets. The security image checks require an unused
+explicit `IMAGE_TAG` because each target builds and removes that temporary tag:
+
+```bash
+make tests
+make security
+make query-plans-realistic
+make performance-lighthouse
 make security-trivy-config
 make security-backend-docker-image IMAGE_TAG=local-security-check
 make security-frontend-docker-image IMAGE_TAG=local-security-check
 make security-nginx-docker-image IMAGE_TAG=local-security-check
 ```
 
-Each image target builds from the current checkout, runs Dockle and Trivy, and removes only the
-temporary image tag it created. Use an image tag that does not already exist locally.
-
-Locally built runtime images use the GitHub commit SHA from the required `IMAGE_TAG` runtime
-environment entry. `docker-compose.yml` intentionally has no `latest` fallback for the backend,
-frontend, nginx, or MinIO wrapper images, so a production start fails early if the deploy renderer
-does not provide the tag.
-
-Start deploy from **Actions** -> **Deploy to production** -> **Run workflow** on `main`. Select
-`issue_certificates` when the certificate must be issued again, including after adding a hostname
-to the certificate SAN list. The repository environment must restrict production deployments to
-`main` and require reviewer approval. Without those GitHub Environment protection rules, the
-workflow remains manual, but production deploys would no longer have the environment approval and
-branch protections described here.
-
-## GitHub Environment
-
-Create a GitHub Environment named `production`.
-
-Required protection rules:
-
-- Required reviewers are enabled, so the deploy job waits for **Approve and deploy**.
-- Deployment branches are restricted to `main`.
-
-Deploy connection variables:
-
-- `REMOTE_HOST`
-- `REMOTE_USER`
-- `REMOTE_PATH`
-
-Deploy-only secret:
-
-- `SSH_PRIVATE_KEY`
-
-Runtime variables:
-
-Runtime secrets:
-
-The deploy renderer still writes these values into the host-side runtime `.env`, but
-the Compose helper materializes them as read-only files under `.deploy-state/compose-secrets/`
-before Docker Compose starts. The secret directory is host-user-only, while the files keep a read bit
-for non-root container UIDs because local Compose file-backed secrets are bind mounts.
-`docker-compose.yml` grants those files to containers through Compose secrets. Backend processes
-read the matching `/run/secrets/*` files at startup, PostgreSQL uses `POSTGRES_PASSWORD_FILE`, and
-MinIO loads root credentials from secret files in its non-root wrapper image. Do not move these
-values back into service `environment` entries or `env_file`, because those values are visible in
-`docker inspect`.
-
-MinIO runs as UID/GID `10002:10002`. During `make run`, the deploy script runs a transient
-maintenance container as root to repair ownership on the `minio_data` volume before starting the
-non-root MinIO runtime container. This keeps upgrades from older root-owned MinIO volumes working
-without granting root to the long-running MinIO service.
-
-Use `SSL_CERT=/certs/fullchain.pem` and `SSL_KEY=/certs/privkey.pem` for the compose-managed
-certificate sync path. Keep deploy-only values such as `REMOTE_HOST`, `REMOTE_USER`,
-`REMOTE_PATH`, `SSH_PRIVATE_KEY`, and registry passwords out of runtime `.env`.
-
-Use `MINIO_HOST=minio` and `MINIO_PORT=9000` for the backend-internal S3 endpoint in the Compose
-network. Use `MINIO_PUBLIC_URL=https://s3.<APP_DOMAIN>` for browser-facing object access and
-computed public file URLs. `MINIO_REGION` must be explicit for SigV4 S3 client operations;
-`us-east-1` is suitable for the bundled MinIO service unless deployment policy chooses another
-region string. The Compose MinIO service derives `MINIO_API_CORS_ALLOW_ORIGIN` from
-`APP_URL_SCHEMA` and `APP_DOMAIN` because the bundled MinIO release does not accept bucket-level
-CORS setup through `PutBucketCors`.
-
-Each task run locks and rechecks at most 100 oldest eligible metadata rows from the public `media`
-namespace. It deletes the MinIO object before deleting its database metadata. A MinIO error keeps
-the row and timestamp for the next scheduled retry, while a reference discovered during the final
-check clears the stale orphan marker. The task deliberately does not list the bucket or remove
-objects without database metadata, and it never scans the private `knowledge-private` bucket;
-object/metadata reconciliation remains a separate operational procedure. Run exactly one TaskIQ
-scheduler process, as defined by Compose, while workers may be scaled independently.
-
-## Private Knowledge Bucket
-
-`make run` executes the one-shot `backend-init` service after PostgreSQL and MinIO are healthy. Its
-`litestar initbuckets` CLI command initializes both `media` and `knowledge-private`; for the private
-bucket it creates the bucket when absent and deletes any bucket policy and bucket CORS
-configuration. Do not replace this with a public MinIO bootstrap policy. If initialization fails,
-the deployment must not be treated as ready even if old application containers are still serving.
-
-After initialization and after every restore:
-
-### Backup And Restore
-
-Use coordinated recovery points where practical and record the PostgreSQL snapshot and object
-backup identifiers together. Test recovery in an isolated environment:
-
-Private-bucket backup/restore automation and recurring restore tests are tracked as future work.
-Until an isolated restore succeeds, backup presence is not proof of recoverability.
-
-## Admin Operational Tools
-
-Cache clear is synchronous, is limited to the three response-cache domains, and deliberately does
-not enqueue a warm. Manual warm is asynchronous: the API creates a bounded-TTL operation record in
-the TaskIQ results Valkey database, enqueues a manual wrapper around the shared full-warm service,
-and the widget polls the operation through `queued`, `running`, `succeeded`, or `failed`. Operation
-records use
-`TASKIQ_RESULT_EXPIRE_SECONDS`; if a worker stops after accepting a task, a `queued` record can
-remain until that TTL. Cache key/TTL metrics are an operational snapshot rather than a transactional
-freshness guarantee.
-
-Expired-session pruning uses the same use case as the scheduled TaskIQ cleanup. “Expiring soon” is
-the server-owned seven-day window and counts only non-revoked sessions whose effective idle or
-absolute expiration falls within it. Keep the TaskIQ worker and scheduler healthy even when manual
-controls are available: the Dashboard widget is an operator tool, not a replacement for scheduled
-maintenance.
-
-Create a P-256 root CA offline and keep its private key off the production host. Use the root to
-create a P-256 issuing CA, then provide the issuing certificate, issuing private key, and complete
-chain through the three dedicated production secrets above. The deployment materializes them as
-Compose secret files; do not move the issuing key into normal environment entries or an image.
-The fail-closed helper accepts only absolute output directories outside the repository:
-
-## TLS
-
-The manual deploy workflow exposes the `issue_certificates` boolean input. When selected, the
-reusable deploy job runs `make certbot-issue` after syncing the new Compose/TLS configuration and
-before `make run`, so a newly added hostname can be included before nginx starts with that
-configuration. Leave the input disabled for ordinary deploys. The deploy startup script still syncs
-certbot-owned certificates into `infra/nginx/certs/` for the unprivileged nginx container.
-
-In production, keep routine renewal host-owned: a systemd timer or equivalent scheduler should run
-`make certbot-renew` from the deployed project directory and let the target resync certificates and
-reload nginx.
-
-If certificates must be issued again on the server, run the maintenance target directly on the
-host:
-
-```bash
-make certbot-issue
-```
-
-For certificate renewal on a running stack:
-
-```bash
-make certbot-renew
-```
-
-To resync existing certbot certificates without renewal:
-
-```bash
-make certbot-sync
-```
-
-## Server Expectations
-
-The remote host needs Docker with the Compose plugin, `make`, `curl`, and SSH access for the
-configured deploy user. The manual deploy job syncs `Makefile`, `docker-compose.yml`, `backend/`,
-`frontend/`, `infra/`, and generated `.env`.
-
-On a systemd-based VPS, Docker itself must be enabled at boot or no container restart policy can
-run after a host reboot:
-
-```bash
-sudo systemctl enable docker.service
-sudo systemctl is-enabled docker.service
-```
-
-## Restart and Edge Recovery
-
-Long-running services use Docker restart policies so containers that were running before a Docker
-daemon or VPS restart return when the enabled daemon starts again. Inactive blue/green backend and
-frontend slots intentionally remain on `unless-stopped`, so a slot stopped by the deploy drain step
-does not return unexpectedly. The public nginx edge uses `always`; `make run` force-recreates it and
-verifies the effective restart policies of every active runtime container through `docker inspect`
-before the edge smoke check.
-
-Docker does not restart a container merely because its health status changes to `unhealthy`.
-The nginx healthcheck therefore records consecutive failures of its loopback
-`/nginx-healthz` endpoint in the existing `/tmp` tmpfs. After 12 failures, it sends `TERM` to nginx
-PID 1; the `always` policy then starts the container again. A successful probe clears the failure
-counter. The recurring probe deliberately checks local liveness only: nginx configuration validity
-is checked during image/deploy validation and at process startup, avoiding a restart loop that
-could replace a still-serving loaded configuration with an invalid on-disk configuration. This
-recovery path needs neither a Docker socket mount nor a privileged watchdog container.
-
-After deployment, verify the applied state with:
-
-```bash
-docker inspect my_site_nginx \
-  --format 'restart={{.HostConfig.RestartPolicy.Name}} status={{.State.Status}} health={{.State.Health.Status}} restarts={{.RestartCount}}'
-docker inspect my_site_nginx \
-  --format '{{range .State.Health.Log}}{{println .End "exit=" .ExitCode .Output}}{{end}}'
-```
+After deployment, verify `https://<APP_DOMAIN>/api/healthcheck` and
+`https://<APP_DOMAIN>/healthz`, inspect the active Compose services, and repeat the private-bucket
+and WireGuard acceptance checks. Query plans are a blocking check for retained Knowledge and Resume
+storage paths. Lighthouse audits CSR performance, accessibility and best practices.

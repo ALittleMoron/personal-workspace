@@ -1,16 +1,17 @@
 # Calendar
 
 Calendar is a standalone, read-only core domain that composes private People birthdays and
-memorable Dates. It does not belong to the Knowledge Dates domain and it is not a Dashboard domain:
-Dashboard is a role-specific page that renders Calendar and other source-owned widgets.
+memorable Dates. It owns no tables and is not part of the Knowledge Dates persistence domain or the
+Dashboard domain.
 
 ## Architecture
 
-The source domains keep their persistence responsibilities:
-
-- Dates select details for the requested months and load Date-to-Person links.
-- People select birthday details for the requested months.
-- Knowledge Items project display names for Dates and People.
+`core/calendar` owns window selection, entry and summary schemas, conversion, relationship
+projection and ordering. `CalendarUseCase` orchestrates author-scoped reads from People, Dates and
+Knowledge Items. The source domains retain persistence ownership: Dates load date-to-Person links,
+People load birthdays, and Knowledge Items project display names. The clean `0001` schema contains
+the indexes used by these reads; the query-plan gate exercises retained Knowledge and Resume storage
+scenarios.
 
 ## Admin API
 
@@ -20,46 +21,36 @@ GET /api/admin/calendar
     &window=month|currentAndNextMonths
 ```
 
-`month` returns the full month containing `referenceDate`.
-`currentAndNextMonths` returns the full reference month plus the following month. The response
-contains the explicit reference date and window, `memorableDateCount` and `birthdayCount`, and
-ordered entries with an annual date, occurrence year, period, kind, display name, and related
+`month` returns the complete month containing `referenceDate`; `currentAndNextMonths` adds the next
+complete month. The response includes the selected reference date/window, date and birthday counts,
+and ordered entries with their annual date, occurrence year, period, kind, display name and related
 People.
 
-Entries are ordered by month in the requested window, day, memorable Date before birthday,
-case-insensitive display name, and ID. December-to-January increments the occurrence year. February
-29 remains an annual February value and is never moved to another day in a non-leap year.
+Entries sort by month, day, memorable date before birthday, case-insensitive name and ID. December
+to January advances the occurrence year. February 29 remains a February annual date and is reported
+below the month grid when the selected year has no such day.
 
-## Dashboard Widgets
+The handler is under the fail-closed `/api/admin` boundary, excluded from OpenAPI and returned with
+`Cache-Control: no-store`. It is for the protected CSR workspace once the planned verified
+administrator identity is available.
 
-`/admin-panel` redirects to the standalone `/admin-panel/dashboard`. Dashboard is the first root
-item in the shared sidebar tree and derives its selected state from the router URL.
+## Dashboard composition
 
-Owner/admin Dashboard sections are selected through the same horizontal, wrapping tab pattern as
-the Resume editor:
+`/admin-panel` redirects to `/admin-panel/dashboard`, which is the first root item in the shared
+sidebar. Its neutral tabs are Home, Calendar and Tools:
 
-- Home is the general composition tab. It currently contains the independent foldable widget for
-  upcoming memorable Dates and birthdays in the browser-local current and next months, and may gain
-  other source-owned widgets without changing the tab identity;
-- Calendar contains the foldable month-grid widget;
-- Tools contains the foldable response-cache and expired-session widget.
+- Home contains the independent foldable widget for upcoming dates and birthdays in the browser's
+  local current and next months.
+- Calendar contains the foldable month-grid widget.
+- Tools contains the independent response-cache maintenance widget.
 
-The upcoming table links Dates and People to their existing details, formats only day/month, and
-renders next-month, anniversary, and age information as a semantic list with locale-aware plural
-rules.
-
-The month grid starts at the browser-local current month. It supports previous/next navigation,
-year stepping and a twelve-month chooser, localized weekday order, multiple linked entries per day,
-today highlighting, stale-response rejection, and a responsive seven-column table. A February 29
-entry in a non-leap selected year appears below the grid under “No day this year”.
-
-The Tools widget preserves cache inspection, clear and asynchronous warm polling, session status
-and pruning, confirmations, notifications, and independent retry states. The old
-`/admin-panel/workspace/tools` URL redirects to Dashboard; `/api/admin/tools/*` is unchanged.
+Collapsed section keys are stored under one neutral browser-local key. Missing, malformed or
+unknown data leaves sections expanded. Widget loading, error and retry states stay independent.
+The month grid supports navigation, year selection, locale weekday order, multiple entries per day,
+today highlighting and stale-response rejection. Names link to their typed Knowledge details.
 
 ## Verification
 
-Frontend tests cover Calendar request serialization, horizontal role-specific Dashboard tabs,
-accessible tab/panel relationships, per-user fold state, independent failures and retries,
-localized summaries and plurals, the month grid and chooser, year transitions, locale week starts,
-stale responses, February 29, links, multiple daily entries, and the embedded Tools workflow.
+Backend tests cover API serialization, access guard and domain ordering. Frontend tests cover
+request serialization, tabs and accessible tab panels, fold-state persistence, independent errors
+and retries, local-date windows, locale formatting, month/year navigation, February 29 and links.

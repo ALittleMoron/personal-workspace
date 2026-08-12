@@ -18,7 +18,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "shell.footer.sourceCode": "Исходный код",
         "shell.footer.siteBuild": "Как устроен сайт",
         "shell.footer.updates": "Обновления",
-        "shell.footer.sitemap": "Карта сайта",
         "shell.footer.email": "Эл. почта",
         "shell.footer.githubProfile": "Профиль GitHub",
         "shell.footer.telegramProfile": "Профиль Telegram",
@@ -551,8 +550,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "adminResumeWorkspace.missing.summary": "Добавьте саммари.",
         "adminResumeWorkspace.missing.skills": "Добавьте навыки.",
         "adminResumeWorkspace.missing.experience": "Добавьте опыт.",
-        "siteBuild.seo.title": "Как устроен сайт",
-        "siteBuild.seo.description": "Инженерный разбор устройства этой базы знаний.",
+        "siteBuild.title": "Как устроен сайт",
         "siteBuild.hero.kicker": "Инженерный разбор",
         "siteBuild.hero.title": "Как устроен этот сайт",
         "siteBuild.hero.lead": (
@@ -569,6 +567,12 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
             "явными границами между доменом, HTTP-слоем, инфраструктурой и хранением. "
             "Приватная база знаний расширяет общий типизированный item отдельными 1:1-таблицами "
             "вместо универсального JSON/EAV, а каждая операция изолируется по автору."
+        ),
+        "siteBuild.architecture.frontendTitle": "Frontend",
+        "siteBuild.architecture.frontendBody": (
+            "Angular 22 работает как CSR-приложение для публичных и административных "
+            "маршрутов. Интерфейсные строки загружаются из backend i18n bundle, а Node/Express "
+            "подставляет request CSP nonce в статический shell, сохраняя строгую CSP."
         ),
         "siteBuild.architecture.infraTitle": "Infrastructure",
         "siteBuild.architecture.infraBody": (
@@ -597,7 +601,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "siteBuild.quality.title": "Качество и эксплуатация",
         "siteBuild.quality.body": (
             "Качество держится на коротких проверках: стиль, типы, unit/integration тесты, "
-            "безопасность, SSR smoke, производительность и SQL-планы. "
+            "безопасность, CSR delivery smoke, производительность и SQL-планы. "
             "Они остаются CI evidence перед релизом, а production deploy запускается вручную "
             "и переключает blue/green трафик только после health checks. В эксплуатации "
             "фоновые задачи, кэш, файлы и runtime контейнеры разделены по ответственности; "
@@ -608,8 +612,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
             "Ближайшие направления: RSS/Atom, публичный roadmap и дальнейшая "
             "работа над наблюдаемостью, производительностью и качеством контента."
         ),
-        "updates.seo.title": "Обновления",
-        "updates.seo.description": "Публичный журнал изменений этой базы знаний.",
+        "updates.title": "Обновления",
         "updates.hero.kicker": "Журнал изменений",
         "updates.hero.title": "Обновления сайта",
         "updates.hero.lead": (
@@ -619,7 +622,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "updates.tag.frontend": "Frontend",
         "updates.tag.backend": "Backend",
         "updates.tag.content": "Контент",
-        "updates.tag.seo": "SEO",
         "updates.tag.analytics": "Аналитика",
         "updates.tag.infra": "Инфраструктура",
         "updates.tag.admin": "Админка",
@@ -644,12 +646,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "shared.datePicker.keyboardHelp": (
             "Используйте стрелки для выбора дня, Page Up и Page Down для смены месяца."
         ),
-        "sitemap.seo.title": "Карта сайта",
-        "sitemap.seo.description": "Карта сайта.",
-        "sitemap.title": "Карта сайта",
-        "sitemap.siteBuild": "Как устроен сайт",
-        "notFound.seo.title": "Страница не найдена",
-        "notFound.seo.description": "Страница не найдена.",
+        "notFound.title": "Страница не найдена",
         "notFound.message": "Страница не найдена.",
         "notFound.home": "Вернуться на главную",
         "i18n.startupError.title": "Не удалось загрузить локализацию",
@@ -670,7 +667,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "shell.footer.sourceCode": "Source code",
         "shell.footer.siteBuild": "How this site is built",
         "shell.footer.updates": "Updates",
-        "shell.footer.sitemap": "Sitemap",
         "shell.footer.email": "Email",
         "shell.footer.githubProfile": "GitHub profile",
         "shell.footer.telegramProfile": "Telegram profile",
@@ -1198,8 +1194,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "adminResumeWorkspace.missing.summary": "Add a summary.",
         "adminResumeWorkspace.missing.skills": "Add skills.",
         "adminResumeWorkspace.missing.experience": "Add experience.",
-        "siteBuild.seo.title": "How this site is built",
-        "siteBuild.seo.description": "An engineering case study about this knowledge base.",
+        "siteBuild.title": "How this site is built",
         "siteBuild.hero.kicker": "Engineering case study",
         "siteBuild.hero.title": "How this site is built",
         "siteBuild.hero.lead": (
@@ -1215,6 +1210,12 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
             "explicit boundaries between domain logic, HTTP, infrastructure, and storage. "
             "The private knowledge base extends a typed common item with dedicated one-to-one "
             "tables instead of universal JSON/EAV, while every operation is author-isolated."
+        ),
+        "siteBuild.architecture.frontendTitle": "Frontend",
+        "siteBuild.architecture.frontendBody": (
+            "Angular 22 runs as a CSR application for both public and administrative routes. "
+            "Interface strings load from the backend i18n bundle, while Node/Express injects "
+            "the request CSP nonce into the static shell to preserve a strict CSP."
         ),
         "siteBuild.architecture.infraTitle": "Infrastructure",
         "siteBuild.architecture.infraBody": (
@@ -1244,7 +1245,8 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "siteBuild.quality.title": "Quality and operations",
         "siteBuild.quality.body": (
             "Quality is covered by short checks: style, types, unit/integration tests, security, "
-            "SSR smoke, performance, and SQL plans. They remain CI release evidence, while "
+            "CSR delivery smoke, performance, and SQL plans. They remain CI release evidence, "
+            "while "
             "production deploy runs manually and switches blue/green traffic only after health "
             "checks pass. In operations, background jobs, cache, files, and runtime containers "
             "have separate responsibilities; public assets are served with CSP and immutable "
@@ -1255,8 +1257,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
             "Near-term work includes RSS/Atom, a public roadmap, and continued "
             "work on observability, performance, and content quality."
         ),
-        "updates.seo.title": "Updates",
-        "updates.seo.description": "Public changelog for this knowledge base.",
+        "updates.title": "Updates",
         "updates.hero.kicker": "Changelog",
         "updates.hero.title": "Updates",
         "updates.hero.lead": (
@@ -1266,7 +1267,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "updates.tag.frontend": "Frontend",
         "updates.tag.backend": "Backend",
         "updates.tag.content": "Content",
-        "updates.tag.seo": "SEO",
         "updates.tag.analytics": "Analytics",
         "updates.tag.infra": "Infrastructure",
         "updates.tag.admin": "Admin",
@@ -1291,12 +1291,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "shared.datePicker.keyboardHelp": (
             "Use arrow keys to choose a day and Page Up or Page Down to change month."
         ),
-        "sitemap.seo.title": "Sitemap",
-        "sitemap.seo.description": "Sitemap.",
-        "sitemap.title": "Sitemap",
-        "sitemap.siteBuild": "How this site is built",
-        "notFound.seo.title": "Page not found",
-        "notFound.seo.description": "Page not found.",
+        "notFound.title": "Page not found",
         "notFound.message": "Page not found.",
         "notFound.home": "Back to home",
         "i18n.startupError.title": "Failed to load localization",

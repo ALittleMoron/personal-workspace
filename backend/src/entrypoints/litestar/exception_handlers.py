@@ -45,7 +45,12 @@ def create_verbose_exception[VerboseHTTPExceptionT: BaseVerboseHTTPException](
     domain_error: DomainError,
     verbose_exception_type: type[VerboseHTTPExceptionT],
 ) -> VerboseHTTPExceptionT:
-    return verbose_exception_type(message=domain_error.message)
+    message = (
+        InternalServerErrorHTTPException.message
+        if verbose_exception_type.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
+        else domain_error.message
+    )
+    return verbose_exception_type(message=message)
 
 
 def domain_to_verbose_response_handler(
@@ -53,15 +58,24 @@ def domain_to_verbose_response_handler(
     exc: Exception,
 ) -> Response[VerboseHTTPExceptionDict]:
     if not isinstance(exc, DomainError):
-        return verbose_http_exception_handler(
-            request,
-            InternalServerErrorHTTPException(message=str(exc)),
-        )
+        return unexpected_exception_handler(request, exc)
     return verbose_http_exception_handler(
         request,
         create_verbose_exception(
             domain_error=exc,
             verbose_exception_type=find_verbose_exception_type(domain_error=exc),
+        ),
+    )
+
+
+def unexpected_exception_handler(
+    request: Request[Any, Any, Any],
+    _exc: Exception,
+) -> Response[VerboseHTTPExceptionDict]:
+    return verbose_http_exception_handler(
+        request,
+        InternalServerErrorHTTPException(
+            message=InternalServerErrorHTTPException.message,
         ),
     )
 
@@ -76,6 +90,7 @@ def readiness_check_error_handler(
 def get_litestar_exception_handlers() -> LitestarExceptionHandlersMap:
     return {
         **ALL_EXCEPTION_HANDLERS_MAP,
+        Exception: unexpected_exception_handler,
         DomainError: domain_to_verbose_response_handler,
         ReadinessCheckError: readiness_check_error_handler,
     }

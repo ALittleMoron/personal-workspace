@@ -1,0 +1,11 @@
+name: Query plans
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  query-plans:
+    uses: ./.github/workflows/_backend_query_plans.yaml

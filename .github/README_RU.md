@@ -3,101 +3,89 @@
 [🇺🇸 English version](./README.md)
 
 | Категория | Технологии |
-|----------|------------|
+| --- | --- |
 | Покрытие | ![coverage-backend](./badges/coverage-backend.svg) ![coverage-frontend](./badges/coverage-frontend.svg) |
-| Backend | ![python](./badges/python.svg) ![litestar](./badges/litestar.svg) ![async](./badges/async.svg) ![pydantic](./badges/pydantic.svg) ![dishka](./badges/dishka.svg) ![taskiq](./badges/taskiq.svg) ![paseto](./badges/paseto.svg) ![argon2](./badges/argon2.svg) ![mcp](./badges/mcp.svg) |
+| Backend | ![python](./badges/python.svg) ![litestar](./badges/litestar.svg) ![async](./badges/async.svg) ![pydantic](./badges/pydantic.svg) ![dishka](./badges/dishka.svg) ![taskiq](./badges/taskiq.svg) ![paseto](./badges/paseto.svg) ![argon2](./badges/argon2.svg) |
 | База данных | ![postgresql](./badges/postgresql.svg) ![sqlalchemy](./badges/sqlalchemy.svg) ![alembic](./badges/alembic.svg) |
 | Кэш | ![valkey](./badges/valkey.svg) |
 | Frontend | ![angular](./badges/angular.svg) ![typescript](./badges/typescript.svg) ![bootstrap](./badges/bootstrap.svg) |
 | Тестирование | ![pytest](./badges/pytest.svg) ![jest](./badges/jest.svg) ![lhci](./badges/lhci.svg) |
 | DevOps | ![docker](./badges/docker.svg) ![nginx](./badges/nginx.svg) ![minio](./badges/minio.svg) ![docker-compose](./badges/docker-compose.svg) |
 | Качество | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
-| Логирование | ![structlog](./badges/structlog.svg) ![ecs-logging](./badges/ecs-logging.svg) ![sentry](./badges/sentry.svg) |
-| Архитектура | ![clean-architecture](./badges/clean-architecture.svg) ![type-safe](./badges/type-safe.svg) |
-| Инструменты | ![uv](./badges/uv.svg) ![granian](./badges/granian.svg) ![node](./badges/node.svg) ![npm](./badges/npm.svg) |
-| CI/CD | ![github-actions](./badges/github-actions.svg) ![dependabot](./badges/dependabot.svg) |
 
-> [!NOTE]
-> Backend coverage — pytest (Python). Frontend coverage — Jest (TypeScript). Оба генерируются в отдельных CI job-ах.
+Портфолио с локализованной публичной case-study страницей и обновлениями, а также с приватным
+рабочим пространством администратора для резюме и базы знаний. Авторизация — следующий этап:
+граница `/api/admin/*` сейчас fail-closed, пока не появится проверенная identity запроса.
 
-Инженерный сайт с публичной case-study страницей, обновлениями, матрицей компетенций,
-локализованными статьями и защищёнными рабочими областями для управления контентом.
+## Документация
 
-## 📖 Документация
+- [База знаний](../docs/knowledge-database.md)
+- [Календарь](../docs/calendar.md)
+- [Production deployment](../docs/production-deploy.md)
+- [Модель угроз](../docs/security-threat-model.md)
+- [Внутренний доступ WireGuard](../docs/wireguard-internal-access.md)
+- [План работ](../docs/TODO.md)
 
-## 📂 Структура проекта
+## Структура проекта
 
-```
+```text
 my-site/
-├── infra/          # nginx reverse proxy, скрипты запуска
-├── frontend/       # Angular 22 hybrid SSR/CSR (собственный Node.js-образ)
-├── backend/        # Litestar API + доменная логика
-│   ├── src/        # Исходный код приложения
-│   ├── tests/      # Backend-тесты (pytest)
-│   └── performance/ # сценарии и отчёты проверки планов PostgreSQL
-├── .env.example    # Пример переменных окружения
-├── .env.test       # Безопасные переменные для тестового окружения
-├── docker-compose.test.yml
-└── docker-compose.yml
+├── backend/        # Litestar API, асинхронный доменный/прикладной код, тесты и query-plan gates
+├── frontend/       # Angular CSR и Node static shell с CSP nonce на каждый запрос
+├── infra/          # nginx edge, обёртка MinIO, deploy, TLS и security-скрипты
+├── docs/           # документация доменов, эксплуатации, безопасности и roadmap
+├── docker-compose.yml
+└── .env.example
 ```
 
-## ✨ Возможности
+nginx — TLS edge. Он проксирует `/api/*` в Litestar, а browser navigation — в Node static shell.
+Shell отдаёт browser build Angular, кэширует версионированные assets, подставляет nonce nginx в
+`index.html`, предоставляет `/healthz` и возвращает SPA shell только для HTML-навигации.
 
-## 🚀 Запуск
+## Быстрый запуск
 
-1. Клонировать репозиторий:
-```bash
-git clone git@github.com:ALittleMoron/my-site.git
-cd my-site
-```
+1. Склонировать репозиторий и создать локальную конфигурацию:
 
-2. Создать файл `.env`:
-```bash
-cp .env.example .env
-```
+   ```bash
+   cp .env.example .env
+   ```
 
-3. Сгенерировать сертификаты для `nginx` (опционально для локального запуска):
+2. Заполнить все значения в `.env`. Compose требует `IMAGE_TAG`; для локальной среды укажите
+   явный временный tag. Реальные secrets не коммитить.
 
-Контейнер nginx запускается с UID/GID `101:101`, поэтому смонтированные сертификат и приватный ключ
-должны быть читаемы этим пользователем. Для локальных файлов `mkcert`
-достаточно `chmod 644 ./infra/nginx/certs/<file>`; для production лучше настроить
-owner/group-права так, чтобы доступ на чтение был только у nginx.
-Production выпуск и renewal Let's Encrypt сертификатов идут через compose-backed
-targets `make certbot-issue`, `make certbot-renew` и `make certbot-sync`. Подробнее:
-[Production Deploy](../docs/production-deploy.md).
+3. При запуске через HTTPS edge положить локальные TLS-файлы в `infra/nginx/certs/`. Контейнер
+   nginx должен иметь к ним read-доступ. Для production используйте описанный Let’s Encrypt flow.
 
-4. Обновить переменные в `.env`.
+4. Запустить стек:
 
-5. Запустить через `Makefile`:
-```bash
-make run
-```
+   ```bash
+   make run
+   ```
 
-## Локальный MCP bridge
+## Endpoints
 
-## ⚙️ Важные ссылки
-
-Локальный edge nginx перенаправляет HTTP на HTTPS, поэтому в браузере используйте HTTPS-ссылки.
+Локальный nginx edge перенаправляет HTTP на HTTPS.
 
 - Frontend: `https://localhost`
 - API: `https://localhost/api`
-- API liveness: `https://localhost/api/healthcheck`
-- API readiness: `https://localhost/api/healthcheck/ready`
+- Liveness: `https://localhost/api/healthcheck`
+- Readiness: `https://localhost/api/healthcheck/ready`
 - Документация API: `https://localhost/api/docs`
-- OpenAPI спецификация: `https://localhost/api/docs/openapi.json`
+- OpenAPI-документ: `https://localhost/api/docs/openapi.json`
 
-Внутренние web-панели доступны только через host-level WireGuard и nginx-порты,
-привязанные к `VPN_BIND_ADDRESS`:
+MinIO Console и Databasus не публичны. nginx привязывает их только к `VPN_BIND_ADDRESS` на портах
+`18081` и `18082`; см. [Внутренний доступ WireGuard](../docs/wireguard-internal-access.md).
 
-Production firewall baseline: `80/tcp`, `443/tcp` и выбранный WireGuard UDP
-port. Подробнее: [WireGuard internal access](../docs/wireguard-internal-access.md).
+## Quality gates
 
-Другие сервисы — в [docker-compose.yml](../docker-compose.yml).
+Используйте Make targets, а не прямой запуск нижележащих инструментов:
 
-## 🧪 Тесты
+```bash
+make tests
+make security
+make query-plans-realistic
+make performance-lighthouse
+```
 
-Backend pytest targets запускаются с явным числом pytest-xdist воркеров по физическим CPU-ядрам,
-без `-n auto`. Для serial-режима задайте `BACKEND_PYTEST_WORKERS=0` или `1`; любое значение больше
-`1` принудительно задаёт точное число воркеров. Unit-тесты идут без test DB; integration-тесты
-клонируют мигрированную template DB текущего запуска в отдельные PostgreSQL базы на worker, а
-Alembic migration-тесты остаются serial на базовой test DB.
+Query-plan gate проверяет актуальные storage-запросы Knowledge и Resume. Lighthouse проверяет CSR
+маршруты по performance, accessibility и best practices.

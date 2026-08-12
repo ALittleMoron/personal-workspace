@@ -98,6 +98,20 @@ quality-backend:
 security-backend:
 	$(MAKE) -C backend security
 
+# Performance
+
+.PHONY: query-plans-realistic
+query-plans-realistic:
+	$(MAKE) -C backend query-plans-realistic
+
+.PHONY: query-plans-baseline-candidate
+query-plans-baseline-candidate:
+	$(MAKE) -C backend query-plans-baseline-candidate
+
+.PHONY: performance-lighthouse
+performance-lighthouse:
+	$(MAKE) -C frontend lighthouse
+
 # Frontend
 
 .PHONY: install-frontend

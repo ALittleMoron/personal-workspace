@@ -25,7 +25,6 @@ from entrypoints.litestar.middlewares.logging import (
     RequestIdLoggingMiddleware,
 )
 from entrypoints.litestar.openapi_metadata import install_openapi_request_body_metadata
-from entrypoints.litestar.public.endpoints import public_router
 from entrypoints.litestar.response_cache import ResponseCacheDomain, ResponseCacheDomainStore
 from infra.config import loggers
 from infra.config.constants import constants
@@ -113,7 +112,7 @@ def create_middlewares(_container: AsyncContainer) -> list[Middleware]:
 
 
 def create_routers() -> list[Router]:
-    return [api_router, public_router]
+    return [api_router]
 
 
 def create_cli_app(

@@ -151,12 +151,6 @@ class APIHelper:
     def get_admin_tools_cache_warm_operation(self, *, operation_id: str) -> Response:
         return self.client.get(f"/api/admin/tools/cache/warm/{operation_id}")
 
-    def get_sitemap_xml(self) -> Response:
-        return self.client.get("/sitemap.xml")
-
-    def get_robots_txt(self) -> Response:
-        return self.client.get("/robots.txt")
-
     def get_wiki_link_targets(self, language: str | None = "ru") -> Response:
         params: dict[str, str] = {}
         if language is not None:

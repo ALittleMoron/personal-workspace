@@ -86,10 +86,5 @@ export function rewriteLanguagePrefixedUrl(currentUrl: string, language: Languag
 }
 
 function isPublicRouteSegment(segment: string | undefined): boolean {
-  return (
-    segment === undefined ||
-    segment === 'how-this-site-is-built' ||
-    segment === 'updates' ||
-    segment === 'sitemap'
-  );
+  return segment === undefined || segment === 'how-this-site-is-built' || segment === 'updates';
 }

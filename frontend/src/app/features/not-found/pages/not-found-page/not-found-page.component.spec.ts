@@ -1,29 +1,32 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { SeoService } from '../../../../core/seo/seo.service';
 import { provideI18nTesting } from '../../../../testing/i18n-testing';
 import { NotFoundPageComponent } from './not-found-page.component';
 
 describe('NotFoundPageComponent', () => {
   let fixture: ComponentFixture<NotFoundPageComponent>;
-  let seoService: { setTranslatedMeta: jest.Mock };
+  let originalHead: string;
+  let expectedHead: string;
 
   beforeEach(async () => {
-    seoService = {
-      setTranslatedMeta: jest.fn(),
-    };
+    originalHead = document.head.innerHTML;
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      '<meta name="description" content="preserved by the page component">',
+    );
+    expectedHead = document.head.innerHTML;
 
     await TestBed.configureTestingModule({
       imports: [NotFoundPageComponent],
-      providers: [
-        provideRouter([]),
-        provideI18nTesting(),
-        { provide: SeoService, useValue: seoService },
-      ],
+      providers: [provideRouter([]), provideI18nTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(NotFoundPageComponent);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    document.head.innerHTML = originalHead;
   });
 
   it('links back to the localized public home', () => {
@@ -34,10 +37,7 @@ describe('NotFoundPageComponent', () => {
     expect(link?.textContent?.trim()).toBe('Вернуться на главную');
   });
 
-  it('sets translated no-content SEO metadata', () => {
-    expect(seoService.setTranslatedMeta).toHaveBeenCalledWith({
-      titleKey: 'notFound.seo.title',
-      descriptionKey: 'notFound.seo.description',
-    });
+  it('leaves document metadata ownership outside the page component', () => {
+    expect(document.head.innerHTML).toBe(expectedHead);
   });
 });

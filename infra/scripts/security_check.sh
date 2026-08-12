@@ -58,6 +58,17 @@ require_file_not_contains() {
     fi
 }
 
+require_file_not_matches() {
+    local file_path="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if grep -Eiq -- "$pattern" "$file_path"; then
+        echo "Unexpected ${description} in ${file_path}: ${pattern}" >&2
+        exit 1
+    fi
+}
+
 require_file_pattern_before() {
     local file_path="$1"
     local first_pattern="$2"
@@ -72,6 +83,146 @@ require_file_pattern_before() {
         echo "Invalid ${description} in ${file_path}: ${first_pattern} must precede ${second_pattern}" >&2
         exit 1
     fi
+}
+
+require_certbot_shrink_configuration() {
+    local tls_script="$1"
+
+    python3 - "$tls_script" <<'PY'
+import re
+import shlex
+import sys
+from pathlib import Path
+
+script_path = Path(sys.argv[1])
+script = script_path.read_text(encoding="utf-8")
+match = re.search(
+    r'docker compose "\$\{compose_options\[@\]\}" certbot \\\n(?P<arguments>.*?)\n    sync_certificates',
+    script,
+    re.DOTALL,
+)
+if match is None:
+    raise SystemExit(f"Could not locate certificate issuance command in {script_path}")
+
+arguments = match.group("arguments")
+tokens = shlex.split(arguments.replace("\\\n", " "), posix=True)
+
+renew_option = "--renew-with-new-domains"
+renew_lookalikes = [token for token in tokens if token.startswith(renew_option)]
+if renew_lookalikes != [renew_option]:
+    raise SystemExit(
+        f"Certificate issuance must contain exactly one standalone {renew_option}; "
+        f"found {renew_lookalikes!r} in {script_path}"
+    )
+
+cert_name_option = "--cert-name"
+cert_name_lookalikes = [token for token in tokens if token.startswith(cert_name_option)]
+cert_name_positions = [index for index, token in enumerate(tokens) if token == cert_name_option]
+if cert_name_lookalikes != [cert_name_option] or len(cert_name_positions) != 1:
+    raise SystemExit(
+        f"Certificate issuance must contain exactly one standalone {cert_name_option}; "
+        f"found {cert_name_lookalikes!r} in {script_path}"
+    )
+cert_name_position = cert_name_positions[0]
+if cert_name_position + 1 >= len(tokens) or tokens[cert_name_position + 1] != "$APP_DOMAIN":
+    actual_value = tokens[cert_name_position + 1] if cert_name_position + 1 < len(tokens) else None
+    raise SystemExit(
+        "Certificate issuance cert name must be exactly APP_DOMAIN; "
+        f"found {actual_value!r} in {script_path}"
+    )
+
+domains = []
+unsupported_domain_options = []
+for index, token in enumerate(tokens):
+    if token == "-d":
+        if index + 1 >= len(tokens):
+            raise SystemExit(
+                f"Certificate issuance has a domain option without a value in {script_path}"
+            )
+        domains.append(tokens[index + 1])
+        continue
+    if token == "--domains" or token.startswith("--domains=") or token.startswith("-d"):
+        unsupported_domain_options.append(token)
+if unsupported_domain_options:
+    raise SystemExit(
+        "Certificate issuance may use only standalone -d domain options; "
+        f"found {unsupported_domain_options!r} in {script_path}"
+    )
+expected_domains = ['$APP_DOMAIN', 's3.${APP_DOMAIN}']
+if domains != expected_domains:
+    raise SystemExit(
+        "Certificate issuance SANs must be exactly APP_DOMAIN and s3.APP_DOMAIN; "
+        f"found {domains!r} in {script_path}"
+    )
+if re.search(r'(?i)(agent|mcp)\.\$?\{?APP_DOMAIN\}?', arguments):
+    raise SystemExit(f"Legacy agent or MCP certificate SAN found in {script_path}")
+PY
+}
+
+require_certbot_shrink_negative_proof() {
+    local tls_script="$1"
+    local negative_proof_dir
+    local mutated_agent_san_script
+    local mutated_cert_name_script
+    local mutated_renew_flag_script
+    local mutated_domains_alias_script
+
+    negative_proof_dir="$(mktemp -d)"
+    mutated_agent_san_script="${negative_proof_dir}/agent-san.sh"
+    mutated_cert_name_script="${negative_proof_dir}/cert-name.sh"
+    mutated_renew_flag_script="${negative_proof_dir}/renew-flag.sh"
+    mutated_domains_alias_script="${negative_proof_dir}/domains-alias.sh"
+    awk '
+        { print }
+        /-d "s3\.\$\{APP_DOMAIN\}"/ {
+            print "        -d \"agent.${APP_DOMAIN}\" \\"
+        }
+    ' "$tls_script" >"$mutated_agent_san_script"
+    if (require_certbot_shrink_configuration "$mutated_agent_san_script") >/dev/null 2>&1; then
+        echo "TLS shrink invariant accepted a legacy agent certificate SAN." >&2
+        rm -rf "$negative_proof_dir"
+        exit 1
+    fi
+
+    awk '
+        {
+            line = $0
+            sub(/--cert-name "\$APP_DOMAIN"/, "--cert-name \"$APP_DOMAIN\"-legacy", line)
+            print line
+        }
+    ' "$tls_script" >"$mutated_cert_name_script"
+    if (require_certbot_shrink_configuration "$mutated_cert_name_script") >/dev/null 2>&1; then
+        echo "TLS shrink invariant accepted a suffixed certificate name." >&2
+        rm -rf "$negative_proof_dir"
+        exit 1
+    fi
+
+    awk '
+        {
+            line = $0
+            sub(/--renew-with-new-domains/, "--renew-with-new-domains=false", line)
+            print line
+        }
+    ' "$tls_script" >"$mutated_renew_flag_script"
+    if (require_certbot_shrink_configuration "$mutated_renew_flag_script") >/dev/null 2>&1; then
+        echo "TLS shrink invariant accepted a suffixed renew-with-new-domains flag." >&2
+        rm -rf "$negative_proof_dir"
+        exit 1
+    fi
+
+    awk '
+        { print }
+        /-d "s3\.\$\{APP_DOMAIN\}"/ {
+            print "        --domains evil.example \\"
+        }
+    ' "$tls_script" >"$mutated_domains_alias_script"
+    if (require_certbot_shrink_configuration "$mutated_domains_alias_script") >/dev/null 2>&1; then
+        echo "TLS shrink invariant accepted an additional long-form domains option." >&2
+        rm -rf "$negative_proof_dir"
+        exit 1
+    fi
+
+    rm -rf "$negative_proof_dir"
 }
 
 require_compose_service_contains() {
@@ -157,6 +308,97 @@ require_file_not_exists() {
         echo "Unexpected ${description}: ${file_path}" >&2
         exit 1
     fi
+}
+
+require_no_legacy_agent_mcp_compose_exposure() {
+    local rendered_compose="$1"
+
+    if ! python3 - "$rendered_compose" <<'PY'
+import json
+import re
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as rendered_compose_file:
+    compose = json.load(rendered_compose_file)
+
+legacy_services = []
+legacy_port_exposure = []
+for service_name, service in compose.get("services", {}).items():
+    service_tokens = service_name.casefold().replace("_", "-").split("-")
+    if {"agent", "mcp"}.intersection(service_tokens):
+        legacy_services.append(service_name)
+
+    for port in service.get("ports", []):
+        if isinstance(port, dict):
+            values = (port.get("published"), port.get("target"))
+            is_legacy_port = any(str(value) == "18083" for value in values if value is not None)
+        else:
+            is_legacy_port = re.search(r"(?<!\d)18083(?!\d)", str(port)) is not None
+        if is_legacy_port:
+            legacy_port_exposure.append(f"{service_name}: {port}")
+
+if legacy_services or legacy_port_exposure:
+    details = []
+    if legacy_services:
+        details.append(f"legacy services: {', '.join(sorted(legacy_services))}")
+    if legacy_port_exposure:
+        details.append(f"legacy port exposure: {', '.join(legacy_port_exposure)}")
+    raise SystemExit("; ".join(details))
+PY
+    then
+        echo "Rendered Compose exposes a legacy Agent/MCP service or port 18083." >&2
+        exit 1
+    fi
+}
+
+require_csr_frontend_compose_configuration() {
+    local rendered_compose="$1"
+
+    if ! python3 - "$rendered_compose" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as rendered_compose_file:
+    compose = json.load(rendered_compose_file)
+
+services = compose.get("services", {})
+problems = []
+for service_name in ("frontend-blue", "frontend-green"):
+    service = services.get(service_name)
+    if service is None:
+        problems.append(f"missing {service_name}")
+        continue
+
+    environment = service.get("environment", {})
+    environment_names = set(environment) if isinstance(environment, dict) else {
+        item.partition("=")[0] for item in environment
+    }
+    if environment_names != {"PORT"}:
+        problems.append(
+            f"{service_name} environment must contain only PORT, got: "
+            f"{', '.join(sorted(environment_names)) or '<empty>'}"
+        )
+
+if problems:
+    raise SystemExit("; ".join(problems))
+PY
+    then
+        echo "Rendered Compose does not preserve the CSR frontend runtime contract." >&2
+        exit 1
+    fi
+}
+
+require_no_legacy_agent_mcp_nginx_exposure() {
+    local rendered_nginx="$1"
+
+    require_file_not_matches \
+        "$rendered_nginx" \
+        '(^|[^[:alnum:]_-])(agent|mcp)\.example\.test([[:space:];]|$)' \
+        "legacy Agent/MCP hostname"
+    require_file_not_matches \
+        "$rendered_nginx" \
+        'listen[[:space:]]+([^[:space:];]*:)?18083([[:space:];]|$)' \
+        "legacy Agent/MCP listener"
 }
 
 require_no_unapproved_network_literals() {
@@ -461,7 +703,6 @@ run_healthcheck_configuration_check() {
     local nginx_healthcheck="${repo_dir}/infra/nginx/healthcheck.sh"
     local run_script="${repo_dir}/infra/scripts/run.sh"
     local backend_start_script="${repo_dir}/backend/start_application.sh"
-    local frontend_server="${repo_dir}/frontend/src/server-app.ts"
     local compose_secret_script="${repo_dir}/infra/scripts/compose_secrets.sh"
     local rendered_compose
     local material_dir
@@ -485,6 +726,8 @@ run_healthcheck_configuration_check() {
         prepare_compose_secret_files
         docker compose -f "$compose_file" config --format json >"$rendered_compose"
     )
+    require_no_legacy_agent_mcp_compose_exposure "$rendered_compose"
+    require_csr_frontend_compose_configuration "$rendered_compose"
     rm -rf "$material_dir"
     rm -f "$rendered_compose"
 
@@ -567,7 +810,6 @@ run_healthcheck_configuration_check() {
     require_file_contains "$compose_secret_script" "COMPOSE_SENTRY_DSN_FILE allow-empty" "empty Sentry DSN secret file support"
     require_file_contains "$compose_secret_script" "chmod 444 \"\$secret_file_path\"" "non-root-readable Compose secret files"
 
-    require_file_contains "$frontend_server" "app.get('/healthz'" "frontend health endpoint"
     require_file_contains "$deploy_workflow" "frontend/" "frontend deploy sync"
 }
 
@@ -615,6 +857,8 @@ run_certbot_configuration_check() {
     local tls_script="${repo_dir}/infra/scripts/tls.sh"
 
     require_file_exists "$tls_script" "TLS helper script"
+    require_certbot_shrink_configuration "$tls_script"
+    require_certbot_shrink_negative_proof "$tls_script"
     require_file_contains "$compose_file" "cert-sync:" "certificate sync service"
     require_file_contains "$compose_file" "certbot-www:/var/www/certbot:ro" "nginx read-only certbot challenge volume"
     require_file_contains "$compose_file" "certbot-www:/var/www/certbot" "certbot challenge volume"
@@ -679,14 +923,17 @@ run_minio_image_check() {
 
 run_nginx_syntax_check() {
     local cert_dir
+    local rendered_nginx_dir
 
     require_command docker
     require_command openssl
 
     nginx_check_temp_dir="$(mktemp -d)"
     cert_dir="${nginx_check_temp_dir}/certs"
+    rendered_nginx_dir="${nginx_check_temp_dir}/rendered"
     nginx_check_image_tag="my-site-nginx-security-check:$(date +%s)-$$"
-    mkdir -p "$cert_dir"
+    mkdir -p "$cert_dir" "$rendered_nginx_dir"
+    chmod 777 "$rendered_nginx_dir"
     trap cleanup_security_check_images EXIT
 
     openssl req \
@@ -719,8 +966,15 @@ run_nginx_syntax_check() {
         -e ACTIVE_FRONTEND_SLOT=frontend-blue \
         -e MINIO_PUBLIC_URL=https://s3.example.test \
         -v "${cert_dir}:/certs:ro" \
+        -v "${rendered_nginx_dir}:/security-check" \
         "$nginx_check_image_tag" \
-        sh -ec 'mkdir -p /tmp/nginx-conf.d && envsubst "\$APP_DOMAIN \$SSL_CERT \$SSL_KEY \$ACTIVE_BACKEND_SLOT \$ACTIVE_FRONTEND_SLOT \$MINIO_PUBLIC_URL" < /etc/nginx/runtime-templates/site.conf.template > /tmp/nginx-conf.d/site.conf && nginx -t'
+        sh -ec 'mkdir -p /tmp/nginx-conf.d && envsubst "\$APP_DOMAIN \$SSL_CERT \$SSL_KEY \$ACTIVE_BACKEND_SLOT \$ACTIVE_FRONTEND_SLOT \$MINIO_PUBLIC_URL" < /etc/nginx/runtime-templates/site.conf.template > /tmp/nginx-conf.d/site.conf && nginx -T > /security-check/nginx.conf 2>&1'
+
+    require_no_legacy_agent_mcp_nginx_exposure "${rendered_nginx_dir}/nginx.conf"
+    require_file_not_matches \
+        "${rendered_nginx_dir}/nginx.conf" \
+        'location[[:space:]]*=[[:space:]]*/(sitemap\.xml|robots\.txt)([[:space:]]|\{)' \
+        "public sitemap/robots route"
 }
 
 run_nginx_recovery_check() {

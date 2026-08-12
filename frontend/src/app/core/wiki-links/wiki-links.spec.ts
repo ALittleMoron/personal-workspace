@@ -1,124 +1,34 @@
 import {
   createWikiLinkTargetLookup,
   findMissingWikiLinkTargets,
+  parseWikiLink,
   parseWikiLinks,
   renderMarkdownWithWikiLinks,
+  replaceWikiLinksWithPlainText,
 } from './wiki-links';
 
 describe('wiki links', () => {
   const sanitizeHtml = (html: string): string => html;
 
-  it('parses typed slug-only and labelled links', () => {
+  it('does not recognize removed article or competency-matrix targets', () => {
+    const markdown = 'Read [[articles:typed-articles]] and [[matrix:angular-forms|Angular forms]].';
+
+    expect(parseWikiLinks(markdown)).toEqual([]);
+    expect(parseWikiLink('[[articles:typed-articles]]')).toBeNull();
     expect(
-      parseWikiLinks(
-        'Read [[articles:typed-articles]] and [[matrix:angular-forms|Angular forms]].',
-      ),
-    ).toEqual([
-      {
-        type: 'articles',
-        slug: 'typed-articles',
-        label: 'typed-articles',
-        raw: '[[articles:typed-articles]]',
-      },
-      {
-        type: 'matrix',
-        slug: 'angular-forms',
-        label: 'Angular forms',
-        raw: '[[matrix:angular-forms|Angular forms]]',
-      },
-    ]);
-  });
-
-  it.each([
-    {
-      type: 'articles' as const,
-      slug: 'typed-articles',
-      label: 'Typed article',
-      path: '/en/articles/typed-articles',
-    },
-    {
-      type: 'matrix' as const,
-      slug: 'angular-forms',
-      label: 'Angular forms',
-      path: '/en/competency-matrix/questions/angular-forms',
-    },
-  ])('parses and renders an escaped label separator for $type links', (link) => {
-    const markdown = `[[${link.type}:${link.slug}\\|${link.label}]]`;
-
-    expect(parseWikiLinks(markdown)).toEqual([
-      {
-        type: link.type,
-        slug: link.slug,
-        label: link.label,
-        raw: markdown,
-      },
-    ]);
-
-    expect(renderMarkdownWithWikiLinks(markdown, 'en', sanitizeHtml)).toContain(
-      `<a href="${link.path}">${link.label}</a>`,
-    );
-  });
-
-  it('ignores legacy untyped and unknown-prefixed wiki links', () => {
-    expect(
-      parseWikiLinks('Read [[typed-articles]], [[unknown:typed-articles]], and [[articles:OK]].'),
+      findMissingWikiLinkTargets({ markdown, availableTargets: createWikiLinkTargetLookup([]) }),
     ).toEqual([]);
   });
 
-  it('reports missing typed targets once', () => {
-    const missing = findMissingWikiLinkTargets({
-      markdown:
-        'Read [[articles:typed-articles]], [[matrix:missing-question]], and [[matrix:missing-question|again]].',
-      availableTargets: createWikiLinkTargetLookup([
-        {
-          type: 'articles',
-          items: [
-            {
-              slug: 'typed-articles',
-              title: 'Typed articles',
-              publishStatus: 'Published',
-            },
-          ],
-        },
-        {
-          type: 'matrix',
-          items: [
-            {
-              slug: 'known-question',
-              title: 'Known question',
-              publishStatus: 'Draft',
-            },
-          ],
-        },
-      ]),
-    });
+  it('does not build links or plain-text replacements for removed target syntax', () => {
+    const markdown = 'Read [[articles:typed-articles]] and [[matrix:question|Label]].';
+    const html = renderMarkdownWithWikiLinks(markdown, 'en', sanitizeHtml);
 
-    expect(missing).toEqual(['matrix:missing-question']);
-  });
-
-  it('renders typed wiki links as sanitized localized internal links', () => {
-    const html = renderMarkdownWithWikiLinks(
-      'Read [[articles:typed-articles]] and [[matrix:angular-forms|Angular forms]].',
-      'ru',
-      sanitizeHtml,
-    );
-
-    expect(html).toContain('<a href="/ru/articles/typed-articles">typed-articles</a>');
-    expect(html).toContain(
-      '<a href="/ru/competency-matrix/questions/angular-forms">Angular forms</a>',
-    );
-  });
-
-  it('keeps unsupported wiki links as plain text', () => {
-    const html = renderMarkdownWithWikiLinks(
-      'Read [[typed-articles]] and [[unknown:slug]].',
-      'en',
-      sanitizeHtml,
-    );
-
-    expect(html).not.toContain('href="/en/articles/typed-articles"');
-    expect(html).toContain('[[typed-articles]]');
-    expect(html).toContain('[[unknown:slug]]');
+    expect(html).toContain('[[articles:typed-articles]]');
+    expect(html).toContain('[[matrix:question|Label]]');
+    expect(html).not.toContain('/articles/');
+    expect(html).not.toContain('/competency-matrix/');
+    expect(replaceWikiLinksWithPlainText(markdown)).toBe(markdown);
   });
 
   it('renders real syntax tokens for multiple supported fenced code blocks', () => {

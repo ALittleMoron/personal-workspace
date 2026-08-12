@@ -34,9 +34,9 @@ describe('SiteFooterComponent', () => {
     expect(link).not.toBeNull();
   });
 
-  it('renders routerLink to /sitemap', () => {
+  it('does not expose the removed sitemap destination', () => {
     const link = el.querySelector('a[routerLink="/sitemap"]');
-    expect(link).not.toBeNull();
+    expect(link).toBeNull();
   });
 
   it('renders localized link to the site-build case study', () => {
