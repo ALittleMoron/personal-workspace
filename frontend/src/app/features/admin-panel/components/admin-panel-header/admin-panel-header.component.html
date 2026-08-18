@@ -36,6 +36,27 @@
     </div>
 
     <div class="d-flex align-items-center justify-content-end gap-2 admin-panel-header-controls">
+      <span
+        class="admin-panel-current-user small text-body-secondary text-nowrap"
+        data-testid="admin-panel-current-user"
+        [title]="username()"
+      >
+        {{ 'auth.currentUser' | t }}: {{ username() }}
+      </span>
+
+      <button
+        type="button"
+        class="btn button-inactive btn-sm"
+        [disabled]="busy()"
+        (click)="requestLogout()"
+      >
+        @if (busy()) {
+          {{ 'auth.logout.submitting' | t }}
+        } @else {
+          {{ 'auth.logout' | t }}
+        }
+      </button>
+
       <button
         type="button"
         class="btn button-inactive btn-sm"

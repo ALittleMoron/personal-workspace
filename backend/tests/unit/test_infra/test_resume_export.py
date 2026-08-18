@@ -21,6 +21,21 @@ class TestResumeExportConstants:
 
 
 class TestResumeDocumentExporter(TestCase):
+    def test_pdf_export_preserves_authored_xml_sensitive_text(self) -> None:
+        exporter = self._exporter()
+        summary = 'Owner & <operator> said "don\'t" > "ship".'
+
+        document = exporter.export_resume(
+            params=ResumeExportParams(
+                format=ResumeExportFormatEnum.PDF,
+                title="Backend resume",
+                language=LanguageEnum.EN,
+                content=self.factory.core.resume_content(summary=summary),
+            ),
+        )
+
+        assert summary in self._extract_pdf_text(content=document.content)
+
     def test_pdf_export_is_linear_and_ats_readable(self) -> None:
         exporter = self._exporter()
 

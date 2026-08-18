@@ -8,17 +8,25 @@ from performance.query_plans.database import (
 
 class TestQueryPlanDatabase:
     def test_run_database_names_are_isolated_and_safe_for_postgresql(self) -> None:
-        first = build_run_database_name(base_name="my_site_database_test", run_id="run-one")
-        second = build_run_database_name(base_name="my_site_database_test", run_id="run-two")
+        first = build_run_database_name(
+            base_name="personal_workspace_database_test", run_id="run-one"
+        )
+        second = build_run_database_name(
+            base_name="personal_workspace_database_test", run_id="run-two"
+        )
 
         assert first != second
-        assert first.startswith("my_site_database_test_query_plans_")
+        assert first.startswith("personal_workspace_database_test_query_plans_")
         assert len(first.encode()) <= 63
         validate_owned_database_name(database_name=first)
 
     @pytest.mark.parametrize(
         "database_name",
-        ["my_site_database_test", "production", "my_site_database_test_query_plans_unsafe-name"],
+        [
+            "personal_workspace_database_test",
+            "production",
+            "personal_workspace_database_test_query_plans_unsafe-name",
+        ],
     )
     def test_cleanup_rejects_non_owned_database_names(self, database_name: str) -> None:
         with pytest.raises(ValueError, match="owned query-plan database"):

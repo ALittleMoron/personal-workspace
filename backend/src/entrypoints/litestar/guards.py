@@ -2,13 +2,13 @@ from litestar.connection import ASGIConnection
 from litestar.exceptions import NotAuthorizedException
 from litestar.handlers.base import BaseRouteHandler
 
-from entrypoints.litestar.identity import VerifiedAdminIdentity
+from core.auth.schemas import User
 
 
-def require_verified_admin_identity(
+def require_authenticated_user(
     connection: ASGIConnection,
     _route_handler: BaseRouteHandler,
 ) -> None:
-    identity = connection.scope.get("user")
-    if not isinstance(identity, VerifiedAdminIdentity) or not identity.username.strip():
+    user = connection.scope.get("user")
+    if not isinstance(user, User) or not user.username.strip():
         raise NotAuthorizedException

@@ -11,7 +11,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "my-site-frontend": {
+    "personal-workspace-frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -47,7 +47,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/my-site-frontend",
+            "outputPath": "dist/personal-workspace-frontend",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
@@ -108,10 +108,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "my-site-frontend:build:production"
+              "buildTarget": "personal-workspace-frontend:build:production"
             },
             "development": {
-              "buildTarget": "my-site-frontend:build:development"
+              "buildTarget": "personal-workspace-frontend:build:development"
             }
           },
           "defaultConfiguration": "development"

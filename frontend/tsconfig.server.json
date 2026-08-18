@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist/my-site-frontend/server",
+    "outDir": "./dist/personal-workspace-frontend/server",
     "rootDir": "./src",
     "module": "Node16",
     "moduleResolution": "Node16",

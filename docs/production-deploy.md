@@ -12,6 +12,7 @@ user and an enabled Docker service. Keep the host checkout directory private to 
 workflow needs these Environment variables:
 
 - `APP_DEBUG`, `APP_DOMAIN`, `APP_URL_SCHEMA`, `APP_USE_CACHE`, `I18N_DEFAULT_LANGUAGE`;
+- `AUTH_SESSION_TTL_SECONDS`, `OWNER_USERNAME`;
 - `DB_DRIVER`, `DB_EXPIRE_ON_COMMIT`, `DB_HOST`, `DB_LOG_QUERY_METRICS`, `DB_MAX_OVERFLOW`,
   `DB_NAME`, `DB_POOL_PRE_PING`, `DB_POOL_SIZE`, `DB_PORT`, `DB_SLOW_QUERY_LOG_STATEMENT_MAX_LENGTH`,
   `DB_SLOW_QUERY_LOG_THRESHOLD_MS`, `DB_USER`;
@@ -25,7 +26,8 @@ workflow needs these Environment variables:
 - deployment connection variables `REMOTE_HOST`, `REMOTE_PATH`, and `REMOTE_USER`.
 
 Required Environment secrets are `APP_SECRET_KEY`, `DB_PASSWORD`, `MINIO_ACCESS_KEY`,
-`MINIO_SECRET_KEY` and `SSH_PRIVATE_KEY`. `SENTRY_DSN` is a secret that may be deliberately empty.
+`MINIO_SECRET_KEY`, `OWNER_PASSWORD_HASH` and `SSH_PRIVATE_KEY`. `SENTRY_DSN` is a secret that may
+be deliberately empty.
 `IMAGE_TAG` is computed from the deployed commit; do not add a `latest` fallback. The authoritative
 machine-readable contract is `infra/deploy/runtime-env.manifest.json`.
 
@@ -33,6 +35,23 @@ At runtime Compose materializes application secrets below `.deploy-state/compose
 them as read-only files under `/run/secrets/*`. Do not put secret values in service `environment` or
 `env_file`, where `docker inspect` can expose them. Do not commit generated `.env`, secret files,
 TLS private keys or production values.
+
+## Authentication and secret rotation
+
+The sole owner is configured by `OWNER_USERNAME` and an Argon2id `OWNER_PASSWORD_HASH`; Compose
+passes the hash to the backend only as `OWNER_PASSWORD_HASH_FILE`. Generate a new hash interactively
+with `make -C backend cli command=hashpassword`, store it as a protected deployment secret, and
+redeploy after rotation. Authentication uses an encrypted persistent `HttpOnly`, `SameSite=Strict`
+session cookie whose `Secure` attribute follows `APP_URL_SCHEMA`, plus a separate CSRF cookie/header
+for unsafe authenticated requests. Authentication, private API, and API documentation responses use
+`Cache-Control: no-store`, and failures use one generic invalid-credential response.
+
+Changing only the password hash prevents future logins with the old password but cannot revoke an
+already copied stateless cookie. Rotate the application session secret to revoke all active cookies.
+Individual session revocation and management require the future server-side-session design.
+
+nginx applies the general API rate limit and an additional 5 requests-per-minute per-IP limit to the
+exact login endpoint; its 429 response remains available to the frontend as a distinct state.
 
 ## Network and services
 

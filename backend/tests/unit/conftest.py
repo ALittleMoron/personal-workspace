@@ -7,12 +7,11 @@ import pytest_asyncio
 from dishka import AsyncContainer, make_async_container
 from dishka.integrations.litestar import LitestarProvider, setup_dishka
 from litestar import Litestar
-from litestar.middleware import DefineMiddleware
 from litestar.testing import TestClient
-from litestar.types import ASGIApp, Middleware, Receive, Scope, Send
+from litestar.types import Middleware
 
-from entrypoints.litestar.identity import VerifiedAdminIdentity
 from entrypoints.litestar.initializers.main import create_litestar_app
+from infra.ioc.prodivers.auth_provider import AuthProvider
 from infra.ioc.prodivers.database_provider import DatabaseProvider
 from tests.unit.mocks.providers.cache_tools import MockCacheToolsProvider
 from tests.unit.mocks.providers.calendar import MockCalendarProvider
@@ -24,16 +23,7 @@ from tests.unit.mocks.providers.resumes import MockResumesProvider
 from tests.unit.mocks.providers.wiki_links import MockWikiLinksProvider
 
 TEST_CURRENT_DATETIME = datetime(2026, 7, 27, 12, 0, tzinfo=UTC)
-
-
-class AuthenticatedRequestMiddleware:
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        scope["user"] = VerifiedAdminIdentity(username="test")
-        scope["auth"] = "unit-test-authentication"
-        await self.app(scope, receive, send)
+TEST_OWNER_USERNAME = "test-owner"
 
 
 @pytest.fixture
@@ -50,6 +40,7 @@ async def container(
     container = make_async_container(
         LitestarProvider(),
         DatabaseProvider(),
+        AuthProvider(),
         MockGeneralProvider(
             uuid_=global_random_uuid,
             hex_uuid=global_random_hex_uuid,
@@ -69,10 +60,7 @@ async def container(
 
 @pytest.fixture
 def app(container: AsyncContainer) -> Litestar:
-    return build_test_app(
-        container=container,
-        extra_middlewares=[DefineMiddleware(AuthenticatedRequestMiddleware)],
-    )
+    return build_test_app(container=container, extra_middlewares=[])
 
 
 def build_test_app(
@@ -93,4 +81,13 @@ def build_test_app(
 @pytest.fixture
 def client(app: Litestar) -> Generator[TestClient]:
     with TestClient(app) as client:
+        login_response = client.post(
+            "/api/auth/login",
+            json={"username": TEST_OWNER_USERNAME, "password": "test-owner-password"},
+        )
+        assert login_response.status_code == 200
+        session_response = client.get("/api/auth/session")
+        assert session_response.status_code == 200
+        csrf_token = client.cookies["XSRF-TOKEN"]
+        client.headers["X-XSRF-TOKEN"] = csrf_token
         yield client

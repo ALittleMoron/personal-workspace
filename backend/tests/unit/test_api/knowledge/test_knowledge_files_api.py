@@ -16,6 +16,7 @@ from core.knowledge.files.schemas import (
 )
 from infra.post_commit_actions import PostCommitActions
 from tests.test_cases import ApiTestCase
+from tests.unit.conftest import TEST_OWNER_USERNAME
 
 NOW = datetime(2026, 7, 27, 12, 0, tzinfo=UTC)
 
@@ -75,7 +76,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         assert response.headers["cache-control"] == "no-store"
         self.use_case.get_file_content.assert_awaited_once_with(
             file_id="1" * 32,
-            author_username="test",
+            author_username=TEST_OWNER_USERNAME,
         )
 
     def test_photo_content_is_inline_normalized_webp(self) -> None:
@@ -211,7 +212,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         assert body["contentPath"] == f"/api/admin/knowledge/files/{file.id}/content"
         params = self.use_case.upload_attachment.await_args.kwargs["params"]
         assert params.item_id == file.item_id
-        assert params.author_username == "test"
+        assert params.author_username == TEST_OWNER_USERNAME
         assert params.kind == KnowledgeFileKind.ATTACHMENT
         assert params.original_name == "private.png"
         assert params.mime_type == "image/png"
@@ -248,7 +249,10 @@ class TestKnowledgeFilesApi(ApiTestCase):
             expected_status=codes.NOT_FOUND,
             expected_message=KnowledgeItemNotFoundError.message,
         )
-        assert self.use_case.upload_attachment.await_args.kwargs["params"].author_username == "test"
+        assert (
+            self.use_case.upload_attachment.await_args.kwargs["params"].author_username
+            == TEST_OWNER_USERNAME
+        )
 
     def test_attachment_upload_accepts_body_above_litestar_default_limit(self) -> None:
         file = self.file(kind=KnowledgeFileKind.ATTACHMENT)

@@ -1,4 +1,4 @@
-# My Site
+# Personal Workspace
 
 [🇷🇺 Russian version](./README_RU.md)
 
@@ -14,8 +14,9 @@
 | Quality | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
 
 Portfolio site with a localized public case study and updates, plus a private administrator
-workspace for resumes and the Knowledge database. Authorization is deliberately the next step:
-the current `/api/admin/*` boundary is fail-closed until a verified request identity exists.
+workspace for resumes and the Knowledge database. The environment-configured authenticated owner
+uses an encrypted session to access `/api/admin/*`; domain access remains author-scoped for a future
+multi-user model.
 
 ## Documentation
 
@@ -29,7 +30,7 @@ the current `/api/admin/*` boundary is fail-closed until a verified request iden
 ## Project structure
 
 ```text
-my-site/
+personal-workspace/
 ├── backend/        # Litestar API, async domain/application code, tests and query-plan gates
 ├── frontend/       # Angular CSR application and Node static shell with per-request CSP nonce
 ├── infra/          # nginx edge, MinIO wrapper, deployment, TLS and security scripts

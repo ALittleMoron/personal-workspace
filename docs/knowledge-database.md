@@ -25,10 +25,9 @@ do not substitute a JSON/EAV field bag or a universal dynamic form.
 ## Access and API
 
 Knowledge controllers live below `/api/admin/knowledge/*`, are excluded from OpenAPI and send
-`Cache-Control: no-store`. The whole `/api/admin/*` router currently requires a verified
-request-scope `VerifiedAdminIdentity`; absent or malformed identity is rejected. The planned
-authenticator will configure one administrator through the environment and will not introduce
-account or team tables.
+`Cache-Control: no-store`. The whole `/api/admin/*` router requires the current authenticated owner;
+absent, malformed, or expired authentication is rejected. The sole environment-configured owner
+supplies `author_username`; the authenticator does not introduce account or team tables.
 
 | Area | Current API |
 | --- | --- |
@@ -37,8 +36,9 @@ account or team tables.
 | Tags | List/search and create at `/tags`; rename/delete at `/tags/{tagId}`. |
 | Files | Attachments at `/items/{itemId}/attachments`, normalized Markdown images at `/items/{itemId}/editor-images`, and protected streaming at `/files/{fileId}/content`. |
 
-Every use case receives the verified identity's username. IDs, links, taxonomy and file operations
-are author-scoped; an unknown and a foreign-owned ID share the same not-found behavior.
+Every use case receives the authenticated owner's username. IDs, links, taxonomy and file operations
+remain author-scoped for future multi-user authentication; an unknown and a foreign-owned ID share
+the same not-found behavior.
 
 ## Private files and Markdown images
 
@@ -81,7 +81,7 @@ owning their business logic; see [Calendar](calendar.md).
    bucket CORS.
 3. From a public network, verify that `https://s3.<APP_DOMAIN>/knowledge-private` and a child path
    return `404`.
-4. Once authentication is available, exercise a protected photo, attachment and editor image;
+4. With the configured owner's authenticated session, exercise a protected photo, attachment and editor image;
    confirm the image has a Blob preview and remains an attachment after its Markdown reference is
    removed.
 5. Confirm Knowledge controllers remain absent from `/api/docs/openapi.json` and responses use

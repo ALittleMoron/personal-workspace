@@ -23,6 +23,10 @@
       "allowEmpty": false
     },
     {
+      "name": "AUTH_SESSION_TTL_SECONDS",
+      "allowEmpty": false
+    },
+    {
       "name": "DB_DRIVER",
       "allowEmpty": false
     },
@@ -107,6 +111,10 @@
       "allowEmpty": false
     },
     {
+      "name": "OWNER_USERNAME",
+      "allowEmpty": false
+    },
+    {
       "name": "SENTRY_USE",
       "allowEmpty": false
     },
@@ -158,6 +166,10 @@
     },
     {
       "name": "MINIO_SECRET_KEY",
+      "allowEmpty": false
+    },
+    {
+      "name": "OWNER_PASSWORD_HASH",
       "allowEmpty": false
     },
     {

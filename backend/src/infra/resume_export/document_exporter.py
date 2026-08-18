@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from datetime import date
+from html import escape
 from io import BytesIO
 from pathlib import Path
-from xml.sax.saxutils import escape
 
 from docx import Document
 from docx.document import Document as WordDocument
@@ -648,7 +648,7 @@ class ResumeDocumentExporterImpl(ResumeDocumentExporter):
     ) -> None:
         if not text:
             return
-        story.append(Paragraph(escape(text), style))
+        story.append(Paragraph(escape(text, quote=False), style))
 
     def _append_pdf_bullets(
         self,

@@ -440,6 +440,7 @@ require_no_inspect_visible_secret_environment() {
         "MINIO_SECRET_KEY:"
         "MINIO_ROOT_PASSWORD:"
         "MINIO_ROOT_USER:"
+        "OWNER_PASSWORD_HASH:"
         "POSTGRES_PASSWORD:"
         "SENTRY_DSN:"
     )
@@ -490,13 +491,13 @@ export_test_runtime_environment() {
     export DB_HOST="postgres"
     export DB_LOG_QUERY_METRICS="false"
     export DB_MAX_OVERFLOW="20"
-    export DB_NAME="my_site_database"
+    export DB_NAME="personal_workspace_database"
     export DB_POOL_PRE_PING="true"
     export DB_POOL_SIZE="10"
     export DB_PORT="5432"
     export DB_SLOW_QUERY_LOG_STATEMENT_MAX_LENGTH="1000"
     export DB_SLOW_QUERY_LOG_THRESHOLD_MS="250"
-    export DB_USER="my_site"
+    export DB_USER="personal_workspace"
     export FILES_ORPHAN_RETENTION_SECONDS="604800"
     export I18N_DEFAULT_LANGUAGE="ru"
     export LE_EMAIL="ops@example.test"
@@ -516,9 +517,12 @@ export_test_runtime_environment() {
     export VALKEY_PORT="6379"
     export VPN_BIND_ADDRESS="10.77.0.1"
     export APP_SECRET_KEY="app-secret"
+    export AUTH_SESSION_TTL_SECONDS="86400"
     export DB_PASSWORD="postgres-password"
     export MINIO_ACCESS_KEY="minio-access"
     export MINIO_SECRET_KEY="minio-secret"
+    export OWNER_PASSWORD_HASH="owner-password-hash"
+    export OWNER_USERNAME="owner"
     export SENTRY_DSN=""
 }
 
@@ -597,6 +601,9 @@ run_deploy_env_configuration_check() {
     require_file_not_contains "$deploy_workflow" "CACHE_WARM_NOTES_PAGE_SIZE" "stale cache warm env name"
 
     require_file_contains "$manifest_file" '"FILES_ORPHAN_RETENTION_SECONDS"' "file orphan retention manifest entry"
+    require_file_contains "$manifest_file" '"AUTH_SESSION_TTL_SECONDS"' "auth session TTL manifest entry"
+    require_file_contains "$manifest_file" '"OWNER_USERNAME"' "owner username manifest entry"
+    require_file_contains "$manifest_file" '"OWNER_PASSWORD_HASH"' "owner password hash manifest entry"
     require_file_contains "$manifest_file" '"TASKIQ_FILE_ORPHAN_PRUNE_INTERVAL_SECONDS"' "file orphan prune interval manifest entry"
     require_file_not_contains "$manifest_file" "CACHE_WARM_NOTES_PAGE_SIZE" "stale cache warm manifest entry"
     require_file_not_contains "$manifest_file" "REMOTE_HOST" "deploy remote host manifest entry"
@@ -611,10 +618,10 @@ run_deploy_env_configuration_check() {
 
     require_file_not_contains "$compose_file" "\${DOCKER_REGISTRY}" "runtime Docker registry interpolation"
     require_file_not_contains "$compose_file" "\${DOCKER_USERNAME}" "runtime Docker username interpolation"
-    require_file_contains "$compose_file" 'image: "my_site_application:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local backend image tag"
-    require_file_contains "$compose_file" 'image: "my_site_frontend:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local frontend image tag"
-    require_file_contains "$compose_file" 'image: "my_site_minio:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local MinIO image tag"
-    require_file_contains "$compose_file" 'image: "my_site_nginx:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local nginx image tag"
+    require_file_contains "$compose_file" 'image: "personal_workspace_application:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local backend image tag"
+    require_file_contains "$compose_file" 'image: "personal_workspace_frontend:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local frontend image tag"
+    require_file_contains "$compose_file" 'image: "personal_workspace_minio:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local MinIO image tag"
+    require_file_contains "$compose_file" 'image: "personal_workspace_nginx:${IMAGE_TAG:?IMAGE_TAG must be set}"' "required local nginx image tag"
     require_no_latest_image_tags \
         "$compose_file" \
         "$backend_image_workflow" \
@@ -634,6 +641,8 @@ run_deploy_env_configuration_check() {
         python3 "$renderer" --manifest "$manifest_file" --output "$rendered_env"
     )
     require_file_contains "$rendered_env" 'FILES_ORPHAN_RETENTION_SECONDS="604800"' "rendered file orphan retention"
+    require_file_contains "$rendered_env" 'AUTH_SESSION_TTL_SECONDS="86400"' "rendered auth session TTL"
+    require_file_contains "$rendered_env" 'OWNER_USERNAME="owner"' "rendered owner username"
     require_file_contains "$rendered_env" 'TASKIQ_FILE_ORPHAN_PRUNE_INTERVAL_SECONDS="86400"' "rendered file orphan prune interval"
     require_file_contains "$rendered_env" 'MINIO_REGION="us-east-1"' "rendered MinIO region"
     require_file_contains "$rendered_env" 'MINIO_PUBLIC_URL="https://s3.example.test"' "rendered public MinIO URL"
@@ -771,17 +780,21 @@ run_healthcheck_configuration_check() {
     require_file_contains "$compose_file" "POSTGRES_PASSWORD_FILE: /run/secrets/db_password" "Postgres password secret file"
     require_file_contains "$compose_file" "MINIO_ACCESS_KEY_FILE: /run/secrets/minio_access_key" "backend MinIO access key secret file"
     require_file_contains "$compose_file" "MINIO_SECRET_KEY_FILE: /run/secrets/minio_secret_key" "backend MinIO secret key secret file"
+    require_file_contains "$compose_file" "OWNER_PASSWORD_HASH_FILE: /run/secrets/owner_password_hash" "backend owner password hash secret file"
+    require_file_contains "$compose_file" "OWNER_USERNAME: \${OWNER_USERNAME}" "backend owner username setting"
+    require_file_contains "$compose_file" "AUTH_SESSION_TTL_SECONDS: \${AUTH_SESSION_TTL_SECONDS}" "backend auth session TTL setting"
     require_file_contains "$compose_file" "SENTRY_DSN_FILE: /run/secrets/sentry_dsn" "backend Sentry DSN secret file"
     require_file_contains "$compose_file" "file: \${COMPOSE_APP_SECRET_KEY_FILE:?" "Compose app secret file source"
     require_file_contains "$compose_file" "file: \${COMPOSE_DB_PASSWORD_FILE:?" "Compose database password secret file source"
     require_file_contains "$compose_file" "file: \${COMPOSE_MINIO_ACCESS_KEY_FILE:?" "Compose MinIO access key secret file source"
     require_file_contains "$compose_file" "file: \${COMPOSE_MINIO_SECRET_KEY_FILE:?" "Compose MinIO secret key secret file source"
+    require_file_contains "$compose_file" "file: \${COMPOSE_OWNER_PASSWORD_HASH_FILE:?" "Compose owner password hash secret file source"
     require_file_contains "$compose_file" "file: \${COMPOSE_SENTRY_DSN_FILE:?" "Compose Sentry DSN secret file source"
 
     require_file_contains "$nginx_template" "resolver 127.0.0.11" "Docker DNS resolver"
     require_file_contains "$nginx_entrypoint" "Rendered nginx configuration is empty." "fail-closed nginx rendering"
     require_file_contains "$nginx_entrypoint" "mv \"\$temporary_file\" \"\$rendered_file\"" "atomic nginx configuration switch"
-    require_file_contains "$compose_file" 'command: ["/usr/local/bin/my-site-nginx-entrypoint"]' "nginx entrypoint command"
+    require_file_contains "$compose_file" 'command: ["/usr/local/bin/personal-workspace-nginx-entrypoint"]' "nginx entrypoint command"
     require_file_contains "$nginx_template" "server \${ACTIVE_BACKEND_SLOT}:8080 resolve;" "active backend slot"
     require_file_contains "$nginx_template" "server \${ACTIVE_FRONTEND_SLOT}:4000 resolve;" "active frontend slot"
     require_file_contains "$nginx_template" "connect-src 'self' \${MINIO_PUBLIC_URL}" "public MinIO file CSP"
@@ -790,6 +803,11 @@ run_healthcheck_configuration_check() {
     require_file_contains "$nginx_template" "proxy_set_header X-CSP-Nonce" "frontend CSP nonce proxy header"
     require_frontend_location_has_no_proxy_headers "$nginx_template"
     require_file_contains "$nginx_template" "location ^~ /api/docs" "public API docs CSP location"
+    require_file_contains "$nginx_template" "limit_req_zone \$binary_remote_addr zone=auth_login_per_ip:10m rate=5r/m;" "login rate-limit zone"
+    require_file_contains "$nginx_template" "location = /api/auth/login" "exact login rate-limit location"
+    require_file_contains "$nginx_template" "limit_req zone=auth_login_per_ip burst=5 nodelay;" "login rate limit"
+    require_file_contains "$nginx_template" "limit_req zone=api_per_ip burst=60 nodelay;" "login general API rate limit"
+    require_file_pattern_before "$nginx_template" "location = /api/auth/login" "location /api/" "exact login location precedence"
     require_file_contains "$nginx_template" "img-src 'self' data: \${MINIO_PUBLIC_URL} https://cdn.jsdelivr.net" "Swagger UI image CSP"
     require_file_contains "$nginx_template" "font-src 'self' data: https://cdn.jsdelivr.net" "Swagger UI font CSP"
     require_file_contains "$nginx_template" "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net" "Swagger UI script CSP"
@@ -808,6 +826,7 @@ run_healthcheck_configuration_check() {
     require_file_contains "$run_script" "chown -R 10002:10002 /data" "MinIO volume ownership repair"
     require_file_contains "$run_script" "prepare_compose_secret_files" "host-side Compose secret file preparation"
     require_file_contains "$compose_secret_script" "COMPOSE_SENTRY_DSN_FILE allow-empty" "empty Sentry DSN secret file support"
+    require_file_contains "$compose_secret_script" "COMPOSE_OWNER_PASSWORD_HASH_FILE required" "owner password hash secret file support"
     require_file_contains "$compose_secret_script" "chmod 444 \"\$secret_file_path\"" "non-root-readable Compose secret files"
 
     require_file_contains "$deploy_workflow" "frontend/" "frontend deploy sync"
@@ -893,7 +912,7 @@ run_certbot_configuration_check() {
 run_minio_image_check() {
     require_command docker
 
-    minio_check_image_tag="my-site-minio-security-check:$(date +%s)-$$"
+    minio_check_image_tag="personal-workspace-minio-security-check:$(date +%s)-$$"
     minio_check_temp_dir="$(mktemp -d)"
     trap cleanup_security_check_images EXIT
 
@@ -931,7 +950,7 @@ run_nginx_syntax_check() {
     nginx_check_temp_dir="$(mktemp -d)"
     cert_dir="${nginx_check_temp_dir}/certs"
     rendered_nginx_dir="${nginx_check_temp_dir}/rendered"
-    nginx_check_image_tag="my-site-nginx-security-check:$(date +%s)-$$"
+    nginx_check_image_tag="personal-workspace-nginx-security-check:$(date +%s)-$$"
     mkdir -p "$cert_dir" "$rendered_nginx_dir"
     chmod 777 "$rendered_nginx_dir"
     trap cleanup_security_check_images EXIT
@@ -981,7 +1000,7 @@ run_nginx_recovery_check() {
     local attempt
     local restart_count
 
-    nginx_recovery_container_name="my-site-nginx-recovery-check-$(date +%s)-$$"
+    nginx_recovery_container_name="personal-workspace-nginx-recovery-check-$(date +%s)-$$"
     docker run -d \
         --name "$nginx_recovery_container_name" \
         --restart always \
@@ -997,7 +1016,7 @@ run_nginx_recovery_check() {
 
     sleep 11
     if docker exec "$nginx_recovery_container_name" \
-        /usr/local/bin/my-site-nginx-healthcheck >/dev/null 2>&1; then
+        /usr/local/bin/personal-workspace-nginx-healthcheck >/dev/null 2>&1; then
         echo "Nginx recovery probe unexpectedly succeeded without a local nginx listener." >&2
         exit 1
     fi
@@ -1007,7 +1026,7 @@ run_nginx_recovery_check() {
     fi
 
     docker exec "$nginx_recovery_container_name" \
-        /usr/local/bin/my-site-nginx-healthcheck >/dev/null 2>&1 || true
+        /usr/local/bin/personal-workspace-nginx-healthcheck >/dev/null 2>&1 || true
     for attempt in 1 2 3 4 5; do
         restart_count="$(docker inspect -f '{{.RestartCount}}' "$nginx_recovery_container_name")"
         if [ "$restart_count" -ge 1 ] \

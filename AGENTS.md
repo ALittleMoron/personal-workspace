@@ -136,6 +136,8 @@ Portfolio site with a knowledge database and resumes
   Configuration must flow through environment-backed settings. Deterministic non-secret test
   credentials may be committed only in dedicated test fixtures or test environment files and must
   never be usable outside tests.
+- Agents may read and edit the gitignored local `.env`; treat it as local development configuration
+  while continuing to protect real and production secrets.
 - UI localisation is backend-bundle driven: user-facing interface strings come from the backend
   i18n catalog, while database/content localisation is selected explicitly through the owning API.
   Read-facing core entities and read models should expose language-neutral projected fields such as

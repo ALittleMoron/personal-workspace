@@ -5,6 +5,7 @@ readonly COMPOSE_SECRET_SPECS=(
     "DB_PASSWORD db_password COMPOSE_DB_PASSWORD_FILE required literal"
     "MINIO_ACCESS_KEY minio_access_key COMPOSE_MINIO_ACCESS_KEY_FILE required literal"
     "MINIO_SECRET_KEY minio_secret_key COMPOSE_MINIO_SECRET_KEY_FILE required literal"
+    "OWNER_PASSWORD_HASH owner_password_hash COMPOSE_OWNER_PASSWORD_HASH_FILE required literal"
     "SENTRY_DSN sentry_dsn COMPOSE_SENTRY_DSN_FILE allow-empty literal"
 )
 

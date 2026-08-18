@@ -34,7 +34,7 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 function startShell() {
-  const child = spawn(process.execPath, ['dist/my-site-frontend/server/server.js'], {
+  const child = spawn(process.execPath, ['dist/personal-workspace-frontend/server/server.js'], {
     cwd: frontendDir,
     env: { ...process.env, PORT: String(shellPort) },
     stdio: 'inherit',

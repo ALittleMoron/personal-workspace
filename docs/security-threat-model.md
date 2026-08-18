@@ -9,9 +9,9 @@ security finding or restore exercise.
 
 Assets include public source and pages, private Knowledge records and attachments, resumes,
 PostgreSQL/MinIO/Valkey data, deployment credentials, Compose secrets, TLS and WireGuard keys, and
-backup material. Current implementation is deliberately pre-auth: `/api/admin/*` fails closed
-unless a verified request-scope identity is present. The next authorization design is a single
-environment-configured administrator, not account or team management.
+backup material. The current workspace has one environment-configured authenticated owner, not
+account or team management. That owner supplies the `author_username` passed into retained
+per-author access predicates.
 
 Out of scope are endpoint compromise of a visitor device, a full enterprise risk register, and
 complete incident-response or disaster-recovery procedures.
@@ -45,9 +45,9 @@ without a valid nonce cannot receive the SPA shell.
 | Threat | Current controls | Residual risk / follow-up |
 | --- | --- | --- |
 | Private Knowledge object becomes public. | Separate `knowledge-private` bucket; authenticated backend stream; no public or presigned URL; initializer removes bucket policy and CORS; public S3 exact/prefix routes return `404`; private responses are `no-store`. | Host, MinIO-root or private-network compromise can expose data. Verify policy/CORS and public denials after deploy and restore. |
-| A caller reaches private APIs without authority. | `/api/admin/*` requires `VerifiedAdminIdentity` and rejects missing/malformed identity; domain calls are author-scoped; admin routes are excluded from OpenAPI. | The current pre-auth state has no usable admin session. Implement and test the planned single-administrator authenticator before relying on the workspace. |
+| A caller reaches private APIs without authority. | Private APIs and API docs require the configured owner. Authentication uses one generic invalid-credential response, an encrypted persistent `HttpOnly`, `SameSite=Strict` cookie, and CSRF cookie/header validation for unsafe authenticated requests. Private and auth responses are `Cache-Control: no-store`; domain calls remain author-scoped. | The copied stateless cookie has no individual server-side revocation yet. Add durable sessions and session management before multi-user access. |
 | Public markup or browser behavior enables script injection. | CSP is enforced at nginx; the static shell uses a validated request nonce; authored Markdown uses the centralized sanitizer; protected images use Blob URLs rather than direct private paths. | A compromised browser, extension or authenticated endpoint can read data already exposed to it. Keep CSP and sanitization regression tests current. |
-| Secret reaches an image, repository, logs or `docker inspect`. | Deployment renders `.env` from GitHub Environment values; Compose secrets are file-mounted; application services do not receive secret values as normal environment entries; repository rules prohibit real secrets. | Host/deploy-user compromise can read runtime files. Limit host access and rotate exposed credentials. |
+| Secret reaches an image, repository, logs or `docker inspect`. | Deployment renders `.env` from GitHub Environment values; Compose mounts `OWNER_PASSWORD_HASH` and other secrets as files; application services do not receive secret values as normal environment entries; repository rules prohibit real secrets. | Host/deploy-user compromise can read runtime files. Limit host access and rotate exposed credentials. |
 | Internal panels become public. | Only nginx maps ports; panel ports bind to `VPN_BIND_ADDRESS`; infrastructure checks reject public/legacy exposure; host firewall is part of the boundary. | Docker port publishing can bypass naive host-firewall rules. Verify public failure from an external network after each deploy. |
 | Transaction failure removes a referenced private object or leaves an orphan. | Superseded objects are cleaned only post-commit; new uploads have rollback/commit-failure cleanup; cleanup does not replace the original error. | Best-effort cleanup can leave orphans. Recovery and reconciliation procedures remain operational work. |
 | Availability loss from service or edge failure. | Health checks, blue/green slots, restart policies and nginx local liveness recovery reduce single-deploy downtime. | There is no complete production observability or alerting yet. Monitor service health and add alerting as roadmap work. |
@@ -58,8 +58,15 @@ without a valid nonce cannot receive the SPA shell.
 
 - Public HTTP redirects to HTTPS; nginx permits TLS 1.2 and TLS 1.3 and supplies HSTS,
   `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and CSP.
-- Public API limiting is applied at nginx. Swagger uses a route-specific CSP because its UI loads
-  documented third-party assets; API authorization remains a backend responsibility.
+- Public API limiting is applied at nginx. Login additionally has an edge-only per-IP limit of
+  5 requests per minute while retaining the general API limit; 429 remains distinguishable to the
+  frontend. Swagger uses a route-specific CSP because its UI loads documented third-party assets.
+- Session cookies derive `Secure` from the configured URL schema. A password-hash rotation prevents
+  new logins with the old credential but does not revoke an already copied stateless cookie;
+  rotating the session secret revokes all current cookies. Individual revocation is future
+  server-side-session work.
+- Authentication failures do not disclose whether the username, password, or configured hash was
+  invalid, and credentials, hashes, cookies, and CSRF values stay out of logs.
 - The Node frontend is a static CSR shell with a request-bound nonce; it owns neither edge routing
   nor deployment configuration.
 - Keep exactly one TaskIQ scheduler process. Workers can scale independently.

@@ -1,20 +1,32 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Router, provideRouter } from '@angular/router';
+import { of, Subject } from 'rxjs';
 import { I18nLanguage, LanguageCode } from '../../../../core/i18n/i18n.model';
 import { I18nService } from '../../../../core/i18n/i18n.service';
 import { ThemeName, ThemeService } from '../../../../core/layout/theme.service';
+import { AuthSessionService } from '../../../../core/auth/auth-session.service';
+import { AdminUnsavedChangesService } from '../../services/admin-unsaved-changes.service';
+import { NotificationService } from '../../../../core/notifications/notification.service';
 import { AdminPanelHeaderComponent } from './admin-panel-header.component';
 
 describe('AdminPanelHeaderComponent', () => {
   let fixture: ComponentFixture<AdminPanelHeaderComponent>;
   let language: ReturnType<typeof signal<LanguageCode | null>>;
   let theme: ReturnType<typeof signal<ThemeName>>;
+  let logout: jest.Mock;
+  let confirmDiscard: jest.Mock;
+  let discardChanges: jest.Mock;
+  let notifications: { error: jest.Mock };
+  let navigateByUrl: jest.SpyInstance;
 
   beforeEach(async () => {
     language = signal<LanguageCode | null>('ru');
     theme = signal<ThemeName>('light');
+    logout = jest.fn();
+    confirmDiscard = jest.fn(() => true);
+    discardChanges = jest.fn();
+    notifications = { error: jest.fn() };
     const languages = signal<I18nLanguage[]>([
       { code: 'ru', label: 'Русский' },
       { code: 'en', label: 'English' },
@@ -26,6 +38,10 @@ describe('AdminPanelHeaderComponent', () => {
       'shell.theme.light': 'Light',
       'shell.theme.toggle': 'Переключить тему',
       'shell.language.label': 'Язык',
+      'auth.currentUser': 'Текущий пользователь',
+      'auth.logout': 'Выйти',
+      'auth.logout.submitting': 'Выходим',
+      'auth.logout.failed': 'Не удалось выйти',
     };
 
     await TestBed.configureTestingModule({
@@ -45,6 +61,15 @@ describe('AdminPanelHeaderComponent', () => {
           },
         },
         {
+          provide: AuthSessionService,
+          useValue: {
+            state: signal({ status: 'authenticated', user: { username: 'owner' } }),
+            logout,
+          },
+        },
+        { provide: AdminUnsavedChangesService, useValue: { confirmDiscard, discardChanges } },
+        { provide: NotificationService, useValue: notifications },
+        {
           provide: ThemeService,
           useValue: {
             theme,
@@ -56,6 +81,7 @@ describe('AdminPanelHeaderComponent', () => {
 
     fixture = TestBed.createComponent(AdminPanelHeaderComponent);
     fixture.detectChanges();
+    navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
 
   it('links the icon-only back control to the localized public home', () => {
@@ -94,6 +120,60 @@ describe('AdminPanelHeaderComponent', () => {
         .querySelector('[data-testid="admin-panel-home-link"]')
         ?.getAttribute('href'),
     ).toBe('/en/how-this-site-is-built');
+  });
+
+  it('renders the authenticated owner with a full-value tooltip', () => {
+    const currentUser = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="admin-panel-current-user"]',
+    );
+
+    expect(currentUser?.textContent).toContain('owner');
+    expect(currentUser?.getAttribute('title')).toBe('owner');
+  });
+
+  it('keeps the workspace intact when logout is cancelled before the request', () => {
+    confirmDiscard.mockReturnValueOnce(false);
+    buttonWithText('Выйти').click();
+
+    expect(logout).not.toHaveBeenCalled();
+    expect(discardChanges).not.toHaveBeenCalled();
+  });
+
+  it('suppresses duplicate logout and delays baseline commit and navigation until success', () => {
+    const response = new Subject<void>();
+    logout.mockReturnValueOnce(response);
+
+    buttonWithText('Выйти').click();
+    fixture.detectChanges();
+    buttonWithText('Выходим').click();
+
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(confirmDiscard).toHaveBeenCalledTimes(1);
+    expect(discardChanges).not.toHaveBeenCalled();
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    expect(buttonWithText('Выходим').disabled).toBe(true);
+
+    response.next();
+    response.complete();
+    fixture.detectChanges();
+
+    expect(discardChanges).toHaveBeenCalledTimes(1);
+    expect(navigateByUrl).toHaveBeenCalledWith('/login');
+    expect(buttonWithText('Выйти').disabled).toBe(false);
+  });
+
+  it('keeps baselines and navigation intact and clears busy state after logout failure', () => {
+    const response = new Subject<void>();
+    logout.mockReturnValueOnce(response);
+
+    buttonWithText('Выйти').click();
+    response.error(new Error('network'));
+    fixture.detectChanges();
+
+    expect(discardChanges).not.toHaveBeenCalled();
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    expect(notifications.error).toHaveBeenCalledWith('Не удалось выйти');
+    expect(buttonWithText('Выйти').disabled).toBe(false);
   });
 
   function buttonWithText(text: string): HTMLButtonElement {

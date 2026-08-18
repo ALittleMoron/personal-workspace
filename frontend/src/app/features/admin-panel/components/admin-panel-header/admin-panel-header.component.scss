@@ -21,4 +21,32 @@
 .admin-panel-header-controls {
   flex: 0 1 auto;
   min-width: 0;
+  flex-wrap: wrap;
+}
+
+.admin-panel-current-user {
+  min-width: 0;
+  max-width: min(16rem, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 575.98px) {
+  :host nav {
+    padding-inline: 1rem !important;
+  }
+
+  [data-testid='admin-panel-header-primary'],
+  .admin-panel-header-controls {
+    width: 100%;
+  }
+
+  .admin-panel-header-controls {
+    justify-content: flex-start !important;
+  }
+
+  .admin-panel-current-user {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
 }

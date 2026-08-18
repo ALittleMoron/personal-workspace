@@ -1,4 +1,4 @@
-# Мой сайт
+# Personal Workspace
 
 [🇺🇸 English version](./README.md)
 
@@ -14,8 +14,9 @@
 | Качество | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
 
 Портфолио с локализованной публичной case-study страницей и обновлениями, а также с приватным
-рабочим пространством администратора для резюме и базы знаний. Авторизация — следующий этап:
-граница `/api/admin/*` сейчас fail-closed, пока не появится проверенная identity запроса.
+рабочим пространством администратора для резюме и базы знаний. Настроенный через окружение
+аутентифицированный владелец использует зашифрованную сессию для доступа к `/api/admin/*`; доступ
+к доменным данным остаётся ограниченным автором для будущей многопользовательской модели.
 
 ## Документация
 
@@ -29,7 +30,7 @@
 ## Структура проекта
 
 ```text
-my-site/
+personal-workspace/
 ├── backend/        # Litestar API, асинхронный доменный/прикладной код, тесты и query-plan gates
 ├── frontend/       # Angular CSR и Node static shell с CSP nonce на каждый запрос
 ├── infra/          # nginx edge, обёртка MinIO, deploy, TLS и security-скрипты

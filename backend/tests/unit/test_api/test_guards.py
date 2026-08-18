@@ -1,16 +1,10 @@
-from dataclasses import dataclass
 from typing import Any, cast
 
 import pytest
 from litestar.exceptions import NotAuthorizedException
 
-from entrypoints.litestar.guards import require_verified_admin_identity
-from entrypoints.litestar.identity import VerifiedAdminIdentity
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class UnverifiedIdentity:
-    username: str
+from core.auth.schemas import User
+from entrypoints.litestar.guards import require_authenticated_user
 
 
 class FakeConnection:
@@ -18,11 +12,11 @@ class FakeConnection:
         self.scope = {"user": identity}
 
 
-class TestVerifiedAdminIdentityGuard:
-    def test_allows_nonblank_verified_admin_identity(self) -> None:
-        connection = FakeConnection(identity=VerifiedAdminIdentity(username="admin"))
+class TestAuthenticatedUserGuard:
+    def test_allows_nonblank_authenticated_user(self) -> None:
+        connection = FakeConnection(identity=User(username="admin"))
 
-        require_verified_admin_identity(
+        require_authenticated_user(
             cast("Any", connection),
             cast("Any", object()),
         )
@@ -31,16 +25,16 @@ class TestVerifiedAdminIdentityGuard:
         "identity",
         [
             None,
-            UnverifiedIdentity(username="admin"),
-            VerifiedAdminIdentity(username=""),
-            VerifiedAdminIdentity(username="   "),
+            object(),
+            User(username=""),
+            User(username="   "),
         ],
     )
     def test_rejects_missing_unverified_or_blank_identity(self, identity: object | None) -> None:
         connection = FakeConnection(identity=identity)
 
         with pytest.raises(NotAuthorizedException):
-            require_verified_admin_identity(
+            require_authenticated_user(
                 cast("Any", connection),
                 cast("Any", object()),
             )

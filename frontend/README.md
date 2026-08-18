@@ -1,4 +1,4 @@
-# My Site Frontend
+# Personal Workspace Frontend
 
 The public edge remains infrastructure-owned nginx:
 
@@ -23,8 +23,8 @@ make format-check
 make build
 ```
 
-The production browser build is under `dist/my-site-frontend/browser`; `tsconfig.server.json`
-compiles the small Node static server under `dist/my-site-frontend/server`. The runtime requires an
+The production browser build is under `dist/personal-workspace-frontend/browser`; `tsconfig.server.json`
+compiles the small Node static server under `dist/personal-workspace-frontend/server`. The runtime requires an
 explicit positive `PORT` and Compose provides `PORT=4000`.
 
 ## Lighthouse
@@ -44,12 +44,12 @@ updates routes for performance, accessibility and best practices. Reports are wr
 Build from this directory:
 
 ```bash
-docker build -t "my_site_frontend:${IMAGE_TAG:?set IMAGE_TAG}" .
+docker build -t "personal_workspace_frontend:${IMAGE_TAG:?set IMAGE_TAG}" .
 ```
 
 The builder and runtime use the pinned Node Alpine image. The runtime installs production
 dependencies, removes npm tooling/cache, runs as the non-root `node` user with a read-only root
-filesystem supplied by Compose, and starts `dist/my-site-frontend/server/server.js`.
+filesystem supplied by Compose, and starts `dist/personal-workspace-frontend/server/server.js`.
 
 ## Repository boundary
 

@@ -4,6 +4,32 @@ from entrypoints.litestar.api.i18n.catalog import get_i18n_messages
 
 
 class TestI18nCatalog:
+    def test_authentication_experience_copy_is_available_and_nonblank(self) -> None:
+        required_keys = {
+            "auth.login.title",
+            "auth.login.subtitle",
+            "auth.login.username",
+            "auth.login.password",
+            "auth.login.submit",
+            "auth.login.submitting",
+            "auth.login.invalidCredentials",
+            "auth.login.rateLimited",
+            "auth.login.forbidden",
+            "auth.login.serviceError",
+            "auth.login.validationError",
+            "auth.sessionExpired.title",
+            "auth.sessionExpired.message",
+            "auth.logout",
+            "auth.logout.submitting",
+            "auth.logout.failed",
+            "auth.currentUser",
+        }
+
+        for language in LanguageEnum:
+            messages = get_i18n_messages(language=language)
+            assert required_keys <= messages.keys()
+            assert all(messages[key].strip() for key in required_keys)
+
     def test_supported_languages_have_identical_keys(self) -> None:
         russian_keys = set(get_i18n_messages(language=LanguageEnum.RU))
         english_keys = set(get_i18n_messages(language=LanguageEnum.EN))

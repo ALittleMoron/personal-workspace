@@ -48,9 +48,11 @@ class ResponseCacheConstants:
 
 
 class TaskiqConstants:
-    queue_name: Literal["my_site_background"] = "my_site_background"
-    consumer_group_name: Literal["my_site_background"] = "my_site_background"
-    result_prefix: Literal["my_site_taskiq_results"] = "my_site_taskiq_results"
+    queue_name: Literal["personal_workspace_background"] = "personal_workspace_background"
+    consumer_group_name: Literal["personal_workspace_background"] = "personal_workspace_background"
+    result_prefix: Literal["personal_workspace_taskiq_results"] = (
+        "personal_workspace_taskiq_results"
+    )
     cache_warm_all_task_name: Literal["cache_warm_all"] = "cache_warm_all"
     cache_warm_domain_task_name: Literal["cache_warm_domain"] = "cache_warm_domain"
     manual_cache_warm_task_name: Literal["manual_cache_warm"] = "manual_cache_warm"
@@ -169,6 +171,10 @@ class AdminValidationConstants:
     knowledge_relationship_note_max_length: int = 10_000
 
 
+class AuthConstants:
+    argon2id_hash_prefix: Literal["$argon2id$"] = "$argon2id$"
+
+
 class Constants:
     path: PathConstants = PathConstants()
     minio_buckets: MinioBucketNamesConstants = MinioBucketNamesConstants()
@@ -181,6 +187,7 @@ class Constants:
     resume_export: ResumeExportConstants = ResumeExportConstants()
     search: SearchConstants = SearchConstants()
     admin_validation: AdminValidationConstants = AdminValidationConstants()
+    auth: AuthConstants = AuthConstants()
 
 
 constants = Constants()

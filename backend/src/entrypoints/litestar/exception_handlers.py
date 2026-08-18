@@ -6,6 +6,7 @@ from verbose_http_exceptions import (
     ConflictHTTPException,
     InternalServerErrorHTTPException,
     NotFoundHTTPException,
+    UnauthorizedHTTPException,
     status,
 )
 from verbose_http_exceptions.exc.base import BaseVerboseHTTPException, VerboseHTTPExceptionDict
@@ -15,6 +16,7 @@ from verbose_http_exceptions.ext.litestar import (
 )
 from verbose_http_exceptions.ext.litestar.types import LitestarExceptionHandlersMap
 
+from core.auth.exceptions import InvalidCredentialsError
 from core.exceptions import DomainError, EntryNotFoundError
 from core.files.exceptions import FileClientInternalError, FileInUseError, InvalidFileDataError
 from core.knowledge.exceptions import InvalidKnowledgeDataError, KnowledgeConflictError
@@ -27,6 +29,7 @@ DOMAIN_ERROR_MAPPING: dict[type[DomainError], type[BaseVerboseHTTPException]] = 
     FileClientInternalError: InternalServerErrorHTTPException,
     InvalidKnowledgeDataError: BadRequestHTTPException,
     KnowledgeConflictError: ConflictHTTPException,
+    InvalidCredentialsError: UnauthorizedHTTPException,
 }
 
 

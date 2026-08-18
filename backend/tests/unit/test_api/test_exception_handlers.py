@@ -7,6 +7,7 @@ from litestar.testing import TestClient
 from litestar.types import ControllerRouterHandler
 from verbose_http_exceptions import InternalServerErrorHTTPException
 
+from core.auth.exceptions import InvalidCredentialsError
 from core.exceptions import DomainError, EntryNotFoundError
 from core.files.exceptions import FileClientInternalError, FileInUseError, InvalidFileDataError
 from core.knowledge.exceptions import InvalidKnowledgeDataError, KnowledgeConflictError
@@ -47,6 +48,11 @@ def raise_knowledge_conflict() -> None:
     raise KnowledgeConflictError
 
 
+@get("/invalid-credentials", sync_to_thread=False)
+def raise_invalid_credentials() -> None:
+    raise InvalidCredentialsError
+
+
 @get("/python-error", sync_to_thread=False)
 def raise_python_error() -> None:
     raise ValueError(PYTHON_ERROR_MESSAGE)
@@ -70,6 +76,7 @@ def raise_readiness_error() -> None:
         ),
         ("/invalid-knowledge", codes.BAD_REQUEST, InvalidKnowledgeDataError.message),
         ("/knowledge-conflict", codes.CONFLICT, KnowledgeConflictError.message),
+        ("/invalid-credentials", codes.UNAUTHORIZED, InvalidCredentialsError.message),
     ],
 )
 def test_exception_handlers_return_stable_http_contract(
@@ -129,6 +136,7 @@ def exception_route_handlers() -> Sequence[ControllerRouterHandler]:
         raise_file_client_error,
         raise_invalid_knowledge,
         raise_knowledge_conflict,
+        raise_invalid_credentials,
         raise_python_error,
         raise_readiness_error,
     )

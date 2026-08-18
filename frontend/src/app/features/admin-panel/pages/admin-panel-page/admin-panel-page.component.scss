@@ -1,8 +1,14 @@
 .admin-panel-main {
-  --admin-header-clearance: 6rem;
+  --admin-header-clearance: 8.5rem;
   --markdown-editor-sticky-top-inset: var(--admin-header-clearance);
 
   margin-top: var(--admin-header-clearance);
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .admin-panel-main {
+    --admin-header-clearance: 6rem;
+  }
 }
 
 .admin-panel-layout {

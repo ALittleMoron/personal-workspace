@@ -30,9 +30,9 @@ Entries sort by month, day, memorable date before birthday, case-insensitive nam
 to January advances the occurrence year. February 29 remains a February annual date and is reported
 below the month grid when the selected year has no such day.
 
-The handler is under the fail-closed `/api/admin` boundary, excluded from OpenAPI and returned with
-`Cache-Control: no-store`. It is for the protected CSR workspace once the planned verified
-administrator identity is available.
+The handler is under the authenticated `/api/admin` boundary, excluded from OpenAPI and returned
+with `Cache-Control: no-store`. The configured owner's session supplies the author username used by
+the retained author-scoped reads in the protected CSR workspace.
 
 ## Dashboard composition
 

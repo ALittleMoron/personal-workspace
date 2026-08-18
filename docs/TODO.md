@@ -4,12 +4,18 @@ This roadmap contains the active backlog plus transferred completed capability h
 Calendar, and the Knowledge database. Checked history records what the product already supports;
 unchecked entries remain active work unless a later product decision supersedes them.
 
-## Authorization
+## Authentication
 
-- [ ] Implement the environment-configured single-administrator authenticator that supplies a
-  verified request-scope identity to the existing fail-closed `/api/admin/*` guard.
-- [ ] Add end-to-end authorization, session-expiry and protected-blob tests without introducing
-  account or team tables.
+- [x] Add environment-backed single-owner authentication without account, team, role, or session
+  persistence tables.
+- [ ] Add server-side session storage, session management, individual revocation, and expiry tools.
+- [ ] Replace the single-owner authenticator with a users table and multi-user authentication.
+- [ ] Activate the retained per-user author/access model when multi-user authentication arrives.
+- [ ] Add revocation for copied stateless session cookies and document/automate owner credential
+  rotation; password-hash rotation alone must not imply existing cookie revocation.
+- [ ] Protect or remove all legacy public routes except login.
+- [ ] Remove the inherited how-this-site-is-built, updates, sitemap, robots, SEO, and SSR artifacts.
+- [ ] Remove `/admin-panel` and `/api/admin` prefixes when `/` becomes the workspace.
 
 ## Operations and resilience
 
@@ -95,3 +101,7 @@ Each knowledge item has its own subfolder in "knowledge database" folder on side
 - [ ] Automate and test backup/restore for the private knowledge object bucket.
 - [ ] Add future Knowledge item types only with typed persistence extensions, use cases and explicit
   workspace UX.
+
+## Refactoring
+
+- [ ] Remove all admin prefixes. There will be no separated admin panels in project.
