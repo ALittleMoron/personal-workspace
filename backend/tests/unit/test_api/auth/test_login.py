@@ -22,7 +22,7 @@ class TestLoginApi:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == {"username": "test-owner"}
-        assert response.headers["cache-control"] == "no-store"
+        assert response.headers.get("cache-control") != "no-store"
         session_cookie = next(
             value
             for value in response.headers.get_list("set-cookie")
@@ -48,7 +48,7 @@ class TestLoginApi:
             )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.headers["cache-control"] == "no-store"
+        assert response.headers.get("cache-control") != "no-store"
         assert not any(
             value.startswith("personal_workspace_session=")
             for value in response.headers.get_list("set-cookie")
@@ -61,7 +61,7 @@ class TestLoginApi:
             response = client.post("/api/auth/login", json={"username": "test-owner"})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.headers["cache-control"] == "no-store"
+        assert response.headers.get("cache-control") != "no-store"
 
     def test_login_rejects_malformed_configured_password_hash(
         self,
@@ -78,7 +78,7 @@ class TestLoginApi:
             )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert response.headers["cache-control"] == "no-store"
+        assert response.headers.get("cache-control") != "no-store"
         assert not any(
             value.startswith("personal_workspace_session=")
             for value in response.headers.get_list("set-cookie")

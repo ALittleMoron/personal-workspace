@@ -29,7 +29,7 @@ describe('WikiLinkTargetsService', () => {
 
     service.getTargets('ru').subscribe((registry) => (received = registry));
 
-    const req = httpMock.expectOne((r) => r.url.endsWith('/api/admin/wiki-links/targets'));
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/wiki-links/targets'));
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('language')).toBe('ru');
     req.flush({ targets: [] });
@@ -43,7 +43,7 @@ describe('WikiLinkTargetsService', () => {
 
     service.getTargets('en').subscribe((registry) => (received = registry));
 
-    const req = httpMock.expectOne((r) => r.url.endsWith('/api/admin/wiki-links/targets'));
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/wiki-links/targets'));
     req.flush({
       targets: [
         {
@@ -64,9 +64,7 @@ describe('WikiLinkTargetsService', () => {
     service.getTargets('ru').subscribe(first);
     service.getTargets('ru').subscribe(second);
 
-    const requests = httpMock.match((request) =>
-      request.url.endsWith('/api/admin/wiki-links/targets'),
-    );
+    const requests = httpMock.match((request) => request.url.endsWith('/api/wiki-links/targets'));
     expect(requests).toHaveLength(1);
     requests[0].flush({ targets: [] });
 
@@ -79,9 +77,7 @@ describe('WikiLinkTargetsService', () => {
     service.getTargets('en').subscribe();
     service.getTargets('ru').subscribe();
 
-    const requests = httpMock.match((request) =>
-      request.url.endsWith('/api/admin/wiki-links/targets'),
-    );
+    const requests = httpMock.match((request) => request.url.endsWith('/api/wiki-links/targets'));
     expect(requests).toHaveLength(2);
     expect(requests.map((request) => request.request.params.get('language'))).toEqual(['ru', 'en']);
     for (const request of requests) {

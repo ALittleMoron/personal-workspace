@@ -6,6 +6,13 @@ from verbose_http_exceptions import status
 from infra.config.settings import settings
 from tests.unit.conftest import build_test_app
 
+DOCS_PATHS = (
+    "/api/docs",
+    "/api/docs/swagger",
+    "/api/docs/openapi.json",
+    "/api/docs/oauth2-redirect.html",
+)
+
 
 class TestSessionApi:
     def test_session_rehydrates_user_and_establishes_angular_csrf_cookie(
@@ -42,9 +49,9 @@ class TestSessionApi:
 
         with TestClient(app) as client:
             for path in (
-                "/api/admin/tools/cache",
+                "/api/tools/cache",
                 "/api/auth/session",
-                "/api/docs",
+                *DOCS_PATHS,
             ):
                 response = client.get(path)
                 assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -76,18 +83,35 @@ class TestSessionApi:
         app = build_test_app(container=container, extra_middlewares=[])
 
         with TestClient(app) as client:
-            for path in ("/api/authors", "/api/docs-old", "/api/administrator"):
+            for path in ("/api/authors", "/api/docs-old", "/api/administrator", "/api/toolbox"):
                 response = client.get(path)
                 assert response.status_code == status.HTTP_404_NOT_FOUND
                 assert response.headers.get("cache-control") != "no-store"
 
+    def test_legacy_admin_url_is_not_registered_for_an_authenticated_user(
+        self,
+        container: AsyncContainer,
+    ) -> None:
+        app = build_test_app(container=container, extra_middlewares=[])
+
+        with TestClient(app) as client:
+            login_response = client.post(
+                "/api/auth/login",
+                json={"username": "test-owner", "password": "test-owner-password"},
+            )
+            response = client.get("/api/admin/tools/cache")
+
+        assert login_response.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.headers.get("cache-control") != "no-store"
+
     @pytest.mark.parametrize(
         ("method", "path"),
         [
-            ("GET", "/api/admin/tools/cache"),
+            ("GET", "/api/tools/cache"),
             ("GET", "/api/auth/session"),
             ("POST", "/api/auth/logout"),
-            ("GET", "/api/docs"),
+            *(("GET", path) for path in DOCS_PATHS),
         ],
     )
     @pytest.mark.parametrize("cookie_state", ["expired", "tampered", "malformed"])
@@ -129,7 +153,10 @@ class TestSessionApi:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.headers["cache-control"] == "no-store"
 
-    def test_authenticated_docs_are_not_cached(self, container: AsyncContainer) -> None:
+    def test_authenticated_docs_are_not_cached(
+        self,
+        container: AsyncContainer,
+    ) -> None:
         app = build_test_app(container=container, extra_middlewares=[])
 
         with TestClient(app) as client:
@@ -137,8 +164,10 @@ class TestSessionApi:
                 "/api/auth/login",
                 json={"username": "test-owner", "password": "test-owner-password"},
             )
-            response = client.get("/api/docs")
+            for path in DOCS_PATHS:
+                response = client.get(path)
+
+                assert response.status_code == status.HTTP_200_OK
+                assert response.headers["cache-control"] == "no-store"
 
         assert login_response.status_code == status.HTTP_200_OK
-        assert response.status_code == status.HTTP_200_OK
-        assert response.headers["cache-control"] == "no-store"

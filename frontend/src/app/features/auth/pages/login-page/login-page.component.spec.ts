@@ -8,9 +8,11 @@ import { AuthSessionService } from '../../../../core/auth/auth-session.service';
 describe('LoginPageComponent', () => {
   let fixture: ComponentFixture<LoginPageComponent>;
   let navigateByUrl: jest.Mock;
+  let returnUrl: string | null;
 
   beforeEach(async () => {
     navigateByUrl = jest.fn();
+    returnUrl = '/resumes';
     await TestBed.configureTestingModule({
       imports: [LoginPageComponent],
       providers: [
@@ -19,7 +21,7 @@ describe('LoginPageComponent', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { queryParamMap: new Map([['returnUrl', '/admin-panel/resumes']]) },
+            snapshot: { queryParamMap: { get: () => returnUrl } },
           },
         },
         {
@@ -48,6 +50,14 @@ describe('LoginPageComponent', () => {
   it('navigates to the safe return URL after sign-in', () => {
     fixture.componentInstance.onLogin();
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/admin-panel/resumes');
+    expect(navigateByUrl).toHaveBeenCalledWith('/resumes');
+  });
+
+  it('opens the workspace root after sign-in without a safe return URL', () => {
+    returnUrl = '/dashboard';
+
+    fixture.componentInstance.onLogin();
+
+    expect(navigateByUrl).toHaveBeenCalledWith('/');
   });
 });

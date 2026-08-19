@@ -107,10 +107,10 @@ under `frontend/`. Shared repository infrastructure and configuration must live 
   blocked, failed, and successful path. Do not silently return from invalid forms or skipped
   actions: show localized inline errors, notifications, visible disabled/loading states, route/tab
   focus, or another concrete cue that tells the user what happened and what to fix next.
-- Admin forms with `formControlName` fields must apply the shared validation-state mechanism
-  (`AdminControlValidationStateDirective` or the feature's equivalent) so every invalid touched
+- Workspace forms with `formControlName` fields must apply the shared validation-state mechanism
+  (`ControlValidationStateDirective` or the feature's equivalent) so every invalid touched
   `input`, `textarea`, and `select` receives visible invalid styling without one-off template gaps.
-- Admin create/edit forms must register every unsaved authoring source with the shared admin
+- Workspace create/edit forms must register every unsaved authoring source with the shared
   unsaved-changes mechanism, including nested inline drafts and non-form state. Compare the current
   value with the last loaded or successfully saved baseline so a full manual revert is clean, guard
   modal close and route/browser exit paths, and exclude filters, search, sorting, preview controls,
@@ -126,7 +126,7 @@ under `frontend/`. Shared repository infrastructure and configuration must live 
 - Prefer Bootstrap utilities and existing CSS variables before adding component SCSS.
 - Component SCSS must stay focused on local layout/overrides, not global theme concerns.
 - Add new colors through theme variables, not hardcoded component palettes.
-- Keep action hierarchy consistent across public and admin UI. Primary create/save/edit actions may
+- Keep action hierarchy consistent across login and workspace UI. Primary create/save/edit actions may
   use the positive accent; destructive or publication-state-changing actions should usually be less
   visually dominant unless the surrounding design establishes a stronger pattern.
 

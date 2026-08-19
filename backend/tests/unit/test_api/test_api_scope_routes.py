@@ -1,20 +1,19 @@
 from entrypoints.litestar.api.routers import api_router
 
 
-def test_privileged_domain_routes_are_available_only_below_admin_prefix() -> None:
+def test_protected_domain_routes_are_available_at_canonical_api_roots() -> None:
     route_paths = {route.path for route in api_router.routes}
-    admin_paths = {
-        "/api/admin/tools/cache",
-        "/api/admin/calendar",
-        "/api/admin/files",
-        "/api/admin/resumes",
-        "/api/admin/knowledge/people",
-        "/api/admin/knowledge/dates",
-        "/api/admin/wiki-links/targets",
+    protected_paths = {
+        "/api/tools/cache",
+        "/api/calendar",
+        "/api/files",
+        "/api/resumes",
+        "/api/knowledge/people",
+        "/api/knowledge/dates",
+        "/api/wiki-links/targets",
     }
 
-    assert admin_paths <= route_paths
-    assert all(f"/api{path.removeprefix('/api/admin')}" not in route_paths for path in admin_paths)
+    assert protected_paths <= route_paths
 
 
 def test_public_api_keeps_healthcheck_and_i18n_routes() -> None:

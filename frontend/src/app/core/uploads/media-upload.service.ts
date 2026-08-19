@@ -37,10 +37,10 @@ export class MediaUploadService {
     formData.append('purpose', request.purpose);
     formData.append('name', request.name);
     formData.append('file', request.file, request.fileName);
-    return this.api.post<FileResponseDto>('/api/admin/files', formData);
+    return this.api.post<FileResponseDto>('/api/files', formData);
   }
 
   getMediaFile(fileId: string): Observable<UploadedMediaFile> {
-    return this.api.get<FileResponseDto>(`/api/admin/files/${fileId}`);
+    return this.api.get<FileResponseDto>(`/api/files/${fileId}`);
   }
 }

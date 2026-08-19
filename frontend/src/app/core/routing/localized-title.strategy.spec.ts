@@ -11,8 +11,8 @@ class BlankPageComponent {}
 describe('LocalizedTitleStrategy', () => {
   const language = signal<'ru' | 'en'>('ru');
   const messages: Record<'ru' | 'en', Record<string, string>> = {
-    ru: { 'adminPanel.title': 'Админ-панель' },
-    en: { 'adminPanel.title': 'Admin panel' },
+    ru: { 'workspace.title': 'Рабочее пространство' },
+    en: { 'workspace.title': 'Workspace' },
   };
 
   let router: Router;
@@ -23,7 +23,7 @@ describe('LocalizedTitleStrategy', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
-          { path: 'admin', title: 'adminPanel.title', component: BlankPageComponent },
+          { path: 'workspace', title: 'workspace.title', component: BlankPageComponent },
           { path: 'public', component: BlankPageComponent },
         ]),
         {
@@ -41,19 +41,19 @@ describe('LocalizedTitleStrategy', () => {
   });
 
   it('translates the active route title and updates it when the language changes', fakeAsync(() => {
-    void router.navigateByUrl('/admin');
+    void router.navigateByUrl('/workspace');
     tick();
 
-    expect(title.getTitle()).toBe('Админ-панель');
+    expect(title.getTitle()).toBe('Рабочее пространство');
 
     language.set('en');
     TestBed.flushEffects();
 
-    expect(title.getTitle()).toBe('Admin panel');
+    expect(title.getTitle()).toBe('Workspace');
   }));
 
   it('does not overwrite the document title when the active route has no title', fakeAsync(() => {
-    void router.navigateByUrl('/admin');
+    void router.navigateByUrl('/workspace');
     tick();
     void router.navigateByUrl('/public');
     tick();

@@ -43,20 +43,20 @@ describe('authRecoveryInterceptor', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('opens login recovery after one raw 401 from an admin API request without retrying it', () => {
+  it('opens login recovery after one raw 401 from a protected API request without retrying it', () => {
     let failure: unknown;
 
-    http.post('/api/admin/knowledge/people', { name: 'Ada' }).subscribe({
+    http.post('/api/knowledge/people', { name: 'Ada' }).subscribe({
       error: (error: unknown) => (failure = error),
     });
 
-    const request = httpMock.expectOne('/api/admin/knowledge/people');
+    const request = httpMock.expectOne('/api/knowledge/people');
     request.flush({ code: 'not_authenticated' }, { status: 401, statusText: 'Unauthorized' });
 
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect(authState()).toEqual({ status: 'anonymous', user: null });
     expect(overlay.loginRequired()).toBe(true);
-    httpMock.expectNone('/api/admin/knowledge/people');
+    httpMock.expectNone('/api/knowledge/people');
   });
 
   it('does not open recovery for a marked authentication request', () => {
@@ -75,19 +75,55 @@ describe('authRecoveryInterceptor', () => {
     expect(overlay.loginRequired()).toBe(false);
   });
 
-  it.each([403, 429])('preserves a %i admin API error without recovery', (status) => {
+  it.each([403, 429])('preserves a %i protected API error without recovery', (status) => {
     let failure: unknown;
 
-    http.get('/api/admin/knowledge/people').subscribe({
+    http.get('/api/knowledge/people').subscribe({
       error: (error: unknown) => (failure = error),
     });
 
     httpMock
-      .expectOne('/api/admin/knowledge/people')
+      .expectOne('/api/knowledge/people')
       .flush({ code: 'request_failed' }, { status, statusText: 'Request failed' });
 
     expect(failure).toBeInstanceOf(HttpErrorResponse);
     expect((failure as HttpErrorResponse).status).toBe(status);
+    expect(authState()).toEqual({ status: 'authenticated', user: { username: 'owner' } });
+    expect(overlay.loginRequired()).toBe(false);
+  });
+
+  it.each([
+    '/api/tools/cache',
+    '/api/calendar',
+    '/api/files/file-1',
+    '/api/resumes/resume-1',
+    '/api/knowledge/people',
+    '/api/wiki-links/targets',
+    'https://workspace.example.test/api/calendar?window=month#current',
+  ])('opens recovery for canonical protected API request %s', (url) => {
+    http.get(url).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(url).flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    expect(authState()).toEqual({ status: 'anonymous', user: null });
+    expect(overlay.loginRequired()).toBe(true);
+  });
+
+  it.each([
+    '/api/admin/knowledge/people',
+    '/api/toolbox/cache',
+    '/api/administrator/knowledge/people',
+    '/api/auth/session',
+    '/api/healthz',
+    '/api/i18n/languages',
+    '/api/knowledge-base/people',
+    'https://external.example.test/?returnUrl=/api/knowledge/people',
+    'https://external.example.test/#/api/knowledge/people',
+  ])('does not open recovery for a non-protected API 401 at %s', (url) => {
+    http.get(url).subscribe({ error: () => undefined });
+
+    httpMock.expectOne(url).flush({}, { status: 401, statusText: 'Unauthorized' });
+
     expect(authState()).toEqual({ status: 'authenticated', user: { username: 'owner' } });
     expect(overlay.loginRequired()).toBe(false);
   });

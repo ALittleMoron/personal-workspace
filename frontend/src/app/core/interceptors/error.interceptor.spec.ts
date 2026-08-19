@@ -5,7 +5,7 @@ import { errorInterceptor } from './error.interceptor';
 
 describe('errorInterceptor', () => {
   it('preserves a backend error context for callers to render', (done) => {
-    const request = new HttpRequest('POST', '/api/admin/tools/cache/warm');
+    const request = new HttpRequest('POST', '/api/tools/cache/warm');
     const next: HttpHandlerFn = () =>
       throwError(
         () =>

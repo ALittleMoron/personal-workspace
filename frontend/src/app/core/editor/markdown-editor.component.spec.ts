@@ -11,9 +11,9 @@ import {
 } from './markdown-editor.component';
 
 const FIRST_MARKDOWN_URL =
-  '/api/admin/knowledge/files/11111111111111111111111111111111/content#fileId=11111111111111111111111111111111';
+  '/api/knowledge/files/11111111111111111111111111111111/content#fileId=11111111111111111111111111111111';
 const SECOND_MARKDOWN_URL =
-  '/api/admin/knowledge/files/22222222222222222222222222222222/content#fileId=22222222222222222222222222222222';
+  '/api/knowledge/files/22222222222222222222222222222222/content#fileId=22222222222222222222222222222222';
 const ACCEPTED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 describe('MarkdownEditorComponent image capability', () => {

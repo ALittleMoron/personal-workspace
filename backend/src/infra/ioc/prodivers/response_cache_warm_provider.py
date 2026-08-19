@@ -104,7 +104,7 @@ class ResponseCacheWarmProvider(Provider):
             ).get_secret_value(),
             db=constants.valkey.databases.taskiq_results,
             port=settings.valkey.port,
-            namespace=constants.valkey.namespaces.admin_cache_warm_operations,
+            namespace=constants.valkey.namespaces.cache_warm_operations,
         )
         async with store:
             yield ValkeyCacheWarmOperationStorage(

@@ -79,7 +79,7 @@ RequiredShortText = Annotated[
     str,
     Field(
         min_length=1,
-        max_length=constants.admin_validation.short_text_max_length,
+        max_length=constants.api_validation.short_text_max_length,
     ),
     AfterValidator(trim_required),
 ]
@@ -87,46 +87,46 @@ RequiredHttpUrlString = Annotated[
     str,
     Field(
         min_length=1,
-        max_length=constants.admin_validation.url_max_length,
+        max_length=constants.api_validation.url_max_length,
     ),
     AfterValidator(validate_required_http_url),
 ]
 OptionalHttpUrlString = Annotated[
     str | None,
-    Field(max_length=constants.admin_validation.url_max_length),
+    Field(max_length=constants.api_validation.url_max_length),
     AfterValidator(validate_optional_http_url),
 ]
 BlankableHttpUrlString = Annotated[
     str,
-    Field(max_length=constants.admin_validation.url_max_length),
+    Field(max_length=constants.api_validation.url_max_length),
     AfterValidator(validate_blankable_http_url),
 ]
 BlankableEmailString = Annotated[
     str,
-    Field(max_length=constants.admin_validation.email_max_length),
+    Field(max_length=constants.api_validation.email_max_length),
     AfterValidator(validate_blankable_email),
 ]
 OptionalEmailString = Annotated[
     str | None,
     Field(
         min_length=1,
-        max_length=constants.admin_validation.email_max_length,
+        max_length=constants.api_validation.email_max_length,
     ),
     AfterValidator(validate_optional_email),
 ]
 ResumeLongText = Annotated[
     str,
-    Field(max_length=constants.admin_validation.resume_long_text_max_length),
+    Field(max_length=constants.api_validation.resume_long_text_max_length),
 ]
 KnowledgeDescriptionText = Annotated[
     str,
-    Field(max_length=constants.admin_validation.knowledge_description_max_length),
+    Field(max_length=constants.api_validation.knowledge_description_max_length),
 ]
 KnowledgeRelationshipNoteText = Annotated[
     str,
-    Field(max_length=constants.admin_validation.knowledge_relationship_note_max_length),
+    Field(max_length=constants.api_validation.knowledge_relationship_note_max_length),
 ]
 ShortText = Annotated[
     str,
-    Field(max_length=constants.admin_validation.short_text_max_length),
+    Field(max_length=constants.api_validation.short_text_max_length),
 ]

@@ -51,16 +51,16 @@ describe('appConfig', () => {
     expect(initialize).toHaveBeenCalledTimes(1);
   });
 
-  it('recovers from a raw admin 401 before mapping the caller error', async () => {
+  it('recovers from a raw protected 401 before mapping the caller error', async () => {
     const configured = await bootstrapConfiguredHttp();
     let failure: unknown;
 
-    configured.http.get('/api/admin/knowledge/people').subscribe({
+    configured.http.get('/api/knowledge/people').subscribe({
       error: (error: unknown) => (failure = error),
     });
 
     configured.httpMock
-      .expectOne((request) => request.url.endsWith('/api/admin/knowledge/people'))
+      .expectOne((request) => request.url.endsWith('/api/knowledge/people'))
       .flush(
         {
           code: 'not_authenticated',
@@ -89,12 +89,12 @@ describe('appConfig', () => {
       const configured = await bootstrapConfiguredHttp();
       let failure: unknown;
 
-      configured.http.get('/api/admin/knowledge/people').subscribe({
+      configured.http.get('/api/knowledge/people').subscribe({
         error: (error: unknown) => (failure = error),
       });
 
       configured.httpMock
-        .expectOne((request) => request.url.endsWith('/api/admin/knowledge/people'))
+        .expectOne((request) => request.url.endsWith('/api/knowledge/people'))
         .flush(
           {
             code: 'request_failed',

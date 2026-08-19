@@ -19,14 +19,14 @@ from entrypoints.litestar.api.resumes.schemas import (
 )
 
 
-class AdminResumesApiController(Controller):
+class ResumesApiController(Controller):
     path = "/resumes"
-    tags = ["admin resumes"]
+    tags = ["resumes"]
 
     @get(
         "",
-        description="Get the admin resume list.",
-        name="admin-resumes-list-api-handler",
+        description="Get the resume list.",
+        name="resumes-list-api-handler",
         status_code=status_codes.HTTP_200_OK,
         dependencies={"filters": Provide(provide_resume_filters, sync_to_thread=False)},
     )
@@ -41,7 +41,7 @@ class AdminResumesApiController(Controller):
     @post(
         "",
         description="Create a resume.",
-        name="admin-resumes-create-api-handler",
+        name="resumes-create-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
     )
     async def create_resume(
@@ -87,8 +87,8 @@ class AdminResumesApiController(Controller):
 
     @get(
         "/{resume_id:str}",
-        description="Get admin resume details.",
-        name="admin-resumes-detail-api-handler",
+        description="Get resume details.",
+        name="resumes-detail-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def get_resume(
@@ -106,7 +106,7 @@ class AdminResumesApiController(Controller):
     @put(
         "/{resume_id:str}",
         description="Update a resume.",
-        name="admin-resumes-update-api-handler",
+        name="resumes-update-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def update_resume(
@@ -158,7 +158,7 @@ class AdminResumesApiController(Controller):
     @post(
         "/{resume_id:str}/export",
         description="Export a resume.",
-        name="admin-resumes-export-api-handler",
+        name="resumes-export-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def export_resume(
@@ -212,7 +212,7 @@ class AdminResumesApiController(Controller):
     @delete(
         "/{resume_id:str}",
         description="Delete a resume.",
-        name="admin-resumes-delete-api-handler",
+        name="resumes-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_resume(
@@ -227,4 +227,4 @@ class AdminResumesApiController(Controller):
         )
 
 
-admin_router = DishkaRouter("", route_handlers=[AdminResumesApiController])
+api_router = DishkaRouter("", route_handlers=[ResumesApiController])

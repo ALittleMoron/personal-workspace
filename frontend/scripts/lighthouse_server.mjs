@@ -81,7 +81,7 @@ function createProxy() {
       return sendJson(outgoing, 200, { username: lighthouseAuthenticatedValue });
     }
 
-    if (incoming.method === 'GET' && url.pathname === '/api/admin/calendar') {
+    if (incoming.method === 'GET' && url.pathname === '/api/calendar') {
       if (!hasFixtureAuthentication(incoming)) {
         return sendJson(outgoing, 401, { detail: 'Anonymous Lighthouse fixture dashboard request.' });
       }
@@ -92,7 +92,7 @@ function createProxy() {
       return sendJson(outgoing, 200, calendar);
     }
 
-    if (incoming.method === 'GET' && url.pathname === '/api/admin/tools/cache') {
+    if (incoming.method === 'GET' && url.pathname === '/api/tools/cache') {
       if (!hasFixtureAuthentication(incoming)) {
         return sendJson(outgoing, 401, { detail: 'Anonymous Lighthouse fixture dashboard request.' });
       }
@@ -228,7 +228,7 @@ async function verifyDashboardFixtures() {
   }
 
   const anonymousCalendar = await fetch(
-    `http://127.0.0.1:${lighthousePort}/api/admin/calendar?referenceDate=2026-08-19&window=month`,
+    `http://127.0.0.1:${lighthousePort}/api/calendar?referenceDate=2026-08-19&window=month`,
   );
   if (anonymousCalendar.status !== 401) {
     throw new Error('Lighthouse anonymous calendar fixture did not return 401');
@@ -236,7 +236,7 @@ async function verifyDashboardFixtures() {
 
   for (const window of ['month', 'currentAndNextMonths']) {
     const calendarResponse = await fetch(
-      `http://127.0.0.1:${lighthousePort}/api/admin/calendar?referenceDate=2026-08-19&window=${window}`,
+      `http://127.0.0.1:${lighthousePort}/api/calendar?referenceDate=2026-08-19&window=${window}`,
       { headers: authenticatedHeaders },
     );
     const calendar = await calendarResponse.json();
@@ -253,12 +253,12 @@ async function verifyDashboardFixtures() {
     }
   }
 
-  const anonymousCache = await fetch(`http://127.0.0.1:${lighthousePort}/api/admin/tools/cache`);
+  const anonymousCache = await fetch(`http://127.0.0.1:${lighthousePort}/api/tools/cache`);
   if (anonymousCache.status !== 401) {
     throw new Error('Lighthouse anonymous cache fixture did not return 401');
   }
 
-  const cacheResponse = await fetch(`http://127.0.0.1:${lighthousePort}/api/admin/tools/cache`, {
+  const cacheResponse = await fetch(`http://127.0.0.1:${lighthousePort}/api/tools/cache`, {
     headers: authenticatedHeaders,
   });
   const cache = await cacheResponse.json();

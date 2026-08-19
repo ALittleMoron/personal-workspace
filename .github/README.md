@@ -14,8 +14,10 @@
 | Quality | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
 
 Private personal workspace for resumes and the Knowledge database. `/login` is the only anonymous
-UI route; the environment-configured authenticated owner uses an encrypted session to access
-`/api/admin/*`, and domain access remains author-scoped for a future multi-user model.
+UI route; the environment-configured authenticated owner uses an encrypted session for the protected
+`/api/*` product domains (`/api/tools`, `/api/calendar`, `/api/files`, `/api/resumes`,
+`/api/knowledge`, and `/api/wiki-links`), and domain access remains author-scoped for a future
+multi-user model.
 
 ## Documentation
 

@@ -18,6 +18,6 @@ export class LoginPageComponent {
 
   onLogin(): void {
     const returnUrl = sanitizeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
-    this.router.navigateByUrl(returnUrl ?? '/admin-panel/dashboard');
+    this.router.navigateByUrl(returnUrl ?? '/');
   }
 }

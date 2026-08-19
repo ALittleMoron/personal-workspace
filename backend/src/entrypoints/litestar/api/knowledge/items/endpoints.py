@@ -18,9 +18,9 @@ from entrypoints.litestar.api.parameters import (
 from infra.config.constants import constants
 
 
-class AdminKnowledgeTagsApiController(Controller):
+class KnowledgeTagsApiController(Controller):
     path = "/knowledge/tags"
-    tags = ["admin knowledge tags"]
+    tags = ["knowledge tags"]
     include_in_schema = False
     response_headers = {
         constants.knowledge_files.cache_control_header_name: (
@@ -31,7 +31,7 @@ class AdminKnowledgeTagsApiController(Controller):
     @get(
         "",
         description="List or search current author's knowledge tags.",
-        name="admin-knowledge-tags-list-api-handler",
+        name="knowledge-tags-list-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def list_tags(
@@ -50,7 +50,7 @@ class AdminKnowledgeTagsApiController(Controller):
     @post(
         "",
         description="Create an author-scoped knowledge tag.",
-        name="admin-knowledge-tags-create-api-handler",
+        name="knowledge-tags-create-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
     )
     async def create_tag(
@@ -75,7 +75,7 @@ class AdminKnowledgeTagsApiController(Controller):
     @put(
         "/{tag_id:str}",
         description="Rename an author-scoped knowledge tag.",
-        name="admin-knowledge-tags-update-api-handler",
+        name="knowledge-tags-update-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def update_tag(
@@ -105,7 +105,7 @@ class AdminKnowledgeTagsApiController(Controller):
     @delete(
         "/{tag_id:str}",
         description="Delete an unused author-scoped knowledge tag.",
-        name="admin-knowledge-tags-delete-api-handler",
+        name="knowledge-tags-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_tag(

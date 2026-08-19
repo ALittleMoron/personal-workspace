@@ -46,12 +46,12 @@ describe('ApiClient', () => {
 
   it('should request protected binary content as a Blob', () => {
     let result: Blob | undefined;
-    service.getBlob('/api/admin/knowledge/files/file-id/content').subscribe((value) => {
+    service.getBlob('/api/knowledge/files/file-id/content').subscribe((value) => {
       result = value;
     });
 
     const req = httpMock.expectOne((request) =>
-      request.url.endsWith('/api/admin/knowledge/files/file-id/content'),
+      request.url.endsWith('/api/knowledge/files/file-id/content'),
     );
     expect(req.request.method).toBe('GET');
     expect(req.request.responseType).toBe('blob');

@@ -33,9 +33,9 @@ from infra.config.constants import constants
 from infra.post_commit_actions import PostCommitActions
 
 
-class AdminPeopleApiController(Controller):
+class PeopleApiController(Controller):
     path = "/knowledge/people"
-    tags = ["admin knowledge people"]
+    tags = ["knowledge people"]
     include_in_schema = False
     response_headers = {
         constants.knowledge_files.cache_control_header_name: (
@@ -46,7 +46,7 @@ class AdminPeopleApiController(Controller):
     @get(
         "",
         description="List private people owned by the current author.",
-        name="admin-knowledge-people-list-api-handler",
+        name="knowledge-people-list-api-handler",
         status_code=status_codes.HTTP_200_OK,
         dependencies={"filters": Provide(provide_person_filters, sync_to_thread=False)},
     )
@@ -62,7 +62,7 @@ class AdminPeopleApiController(Controller):
     @post(
         "",
         description="Quick-create a private person.",
-        name="admin-knowledge-people-create-api-handler",
+        name="knowledge-people-create-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
     )
     async def create_person(
@@ -87,7 +87,7 @@ class AdminPeopleApiController(Controller):
     @get(
         "/{person_id:str}",
         description="Get one private person owned by the current author.",
-        name="admin-knowledge-people-detail-api-handler",
+        name="knowledge-people-detail-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def get_person(
@@ -106,7 +106,7 @@ class AdminPeopleApiController(Controller):
     @put(
         "/{person_id:str}",
         description="Replace editable private person data and apply relationship commands.",
-        name="admin-knowledge-people-update-api-handler",
+        name="knowledge-people-update-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def update_person(
@@ -153,7 +153,7 @@ class AdminPeopleApiController(Controller):
     @delete(
         "/{person_id:str}",
         description="Permanently delete a private person.",
-        name="admin-knowledge-people-delete-api-handler",
+        name="knowledge-people-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_person(  # noqa: PLR0913
@@ -179,7 +179,7 @@ class AdminPeopleApiController(Controller):
     @get(
         "/relationship-types",
         description="List author-scoped person relationship types.",
-        name="admin-knowledge-relationship-types-list-api-handler",
+        name="knowledge-relationship-types-list-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def list_relationship_types(
@@ -196,7 +196,7 @@ class AdminPeopleApiController(Controller):
     @post(
         "/relationship-types",
         description="Create an author-scoped person relationship type.",
-        name="admin-knowledge-relationship-types-create-api-handler",
+        name="knowledge-relationship-types-create-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
     )
     async def create_relationship_type(
@@ -229,7 +229,7 @@ class AdminPeopleApiController(Controller):
     @put(
         "/relationship-types/{relationship_type_id:str}",
         description="Update an author-scoped person relationship type.",
-        name="admin-knowledge-relationship-types-update-api-handler",
+        name="knowledge-relationship-types-update-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def update_relationship_type(
@@ -265,7 +265,7 @@ class AdminPeopleApiController(Controller):
     @delete(
         "/relationship-types/{relationship_type_id:str}",
         description="Delete an unused author-scoped relationship type.",
-        name="admin-knowledge-relationship-types-delete-api-handler",
+        name="knowledge-relationship-types-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_relationship_type(

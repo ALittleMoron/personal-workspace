@@ -17,7 +17,7 @@ from core.knowledge.dates.schemas import (
 from core.knowledge.items.enums import KnowledgeItemKind
 from core.knowledge.items.schemas import KnowledgeItem
 from entrypoints.litestar.api.knowledge.dates.endpoints import (
-    AdminKnowledgeDatesApiController,
+    KnowledgeDatesApiController,
 )
 from tests.test_cases import ApiTestCase
 from tests.unit.conftest import TEST_OWNER_USERNAME
@@ -53,9 +53,9 @@ class TestKnowledgeDatesApi(ApiTestCase):
 
     def test_list_requires_explicit_pagination_and_sort(self) -> None:
         for response in (
-            self.api.get_admin_knowledge_dates(page=None),
-            self.api.get_admin_knowledge_dates(page_size=None),
-            self.api.get_admin_knowledge_dates(sort=None),
+            self.api.get_knowledge_dates(page=None),
+            self.api.get_knowledge_dates(page_size=None),
+            self.api.get_knowledge_dates(sort=None),
         ):
             self.asserts.status(response=response, expected_status=codes.BAD_REQUEST)
 
@@ -68,7 +68,7 @@ class TestKnowledgeDatesApi(ApiTestCase):
             total_pages=0,
         )
 
-        response = self.api.get_admin_knowledge_dates(
+        response = self.api.get_knowledge_dates(
             page=2,
             page_size=50,
             sort="dateDesc",
@@ -94,7 +94,7 @@ class TestKnowledgeDatesApi(ApiTestCase):
     def test_create_maps_required_fields_and_current_author(self) -> None:
         self.use_case.create_date.return_value = date_response()
 
-        response = self.api.post_admin_knowledge_date(
+        response = self.api.post_knowledge_date(
             data={
                 "displayName": "Anniversary",
                 "date": {"day": 29, "month": 2, "year": None},
@@ -127,7 +127,7 @@ class TestKnowledgeDatesApi(ApiTestCase):
     ) -> None:
         self.use_case.create_date.return_value = date_response()
 
-        response = self.api.post_admin_knowledge_date(
+        response = self.api.post_knowledge_date(
             data={"displayName": "Anniversary", "date": date_value},
         )
 
@@ -147,7 +147,7 @@ class TestKnowledgeDatesApi(ApiTestCase):
             "personIds": ["3" * 32],
         }
 
-        response = self.api.put_admin_knowledge_date(date_id=1, data=payload)
+        response = self.api.put_knowledge_date(date_id=1, data=payload)
 
         self.asserts.status(response=response, expected_status=codes.OK)
         call = self.use_case.update_date.await_args.kwargs
@@ -162,11 +162,11 @@ class TestKnowledgeDatesApi(ApiTestCase):
         assert call["author_username"] == TEST_OWNER_USERNAME
 
         payload["personIds"] = ["3" * 32, "3" * 32]
-        duplicate = self.api.put_admin_knowledge_date(date_id=1, data=payload)
+        duplicate = self.api.put_knowledge_date(date_id=1, data=payload)
         self.asserts.status(response=duplicate, expected_status=codes.BAD_REQUEST)
 
     def test_private_controller_is_hidden_and_uncached(self) -> None:
-        assert AdminKnowledgeDatesApiController.include_in_schema is False
-        assert AdminKnowledgeDatesApiController.response_headers == {
+        assert KnowledgeDatesApiController.include_in_schema is False
+        assert KnowledgeDatesApiController.response_headers == {
             "Cache-Control": "no-store",
         }

@@ -40,7 +40,7 @@ class KnowledgeFileResponseSchema(CamelCaseSchema):
                 size_bytes=schema.size_bytes,
                 name=schema.name,
                 original_name=schema.original_name,
-                content_path=f"/api/admin/knowledge/files/{schema.id}/content",
+                content_path=f"/api/knowledge/files/{schema.id}/content",
                 created_at=schema.created_at.isoformat(),
                 updated_at=schema.updated_at.isoformat(),
             ),

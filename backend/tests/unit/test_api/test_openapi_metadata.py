@@ -5,7 +5,7 @@ from litestar import Litestar
 
 
 class TestOpenApiMetadata:
-    def test_public_schema_exposes_public_routes_and_excludes_admin_routes(
+    def test_public_schema_exposes_public_routes_and_excludes_protected_routes(
         self,
         app: Litestar,
     ) -> None:

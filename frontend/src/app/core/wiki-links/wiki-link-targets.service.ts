@@ -19,12 +19,10 @@ export class WikiLinkTargetsService {
       return cached;
     }
 
-    const registry = this.api
-      .get<WikiLinkTargetsDto>('/api/admin/wiki-links/targets', { language })
-      .pipe(
-        map(() => createWikiLinkTargetRegistry([])),
-        shareReplay({ bufferSize: 1, refCount: false }),
-      );
+    const registry = this.api.get<WikiLinkTargetsDto>('/api/wiki-links/targets', { language }).pipe(
+      map(() => createWikiLinkTargetRegistry([])),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
     this.registries.set(language, registry);
     return registry;
   }

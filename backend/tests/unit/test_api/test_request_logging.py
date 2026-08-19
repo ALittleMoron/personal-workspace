@@ -19,7 +19,7 @@ async def test_request_logging_redacts_private_knowledge_path_and_parameters() -
         config=create_logging_middleware_config(),
     )
     request = Mock()
-    request.url.path = "/api/admin/knowledge/people/11111111111111111111111111111111"
+    request.url.path = "/api/knowledge/people/11111111111111111111111111111111"
 
     with patch.object(
         LoggingMiddleware,
@@ -37,7 +37,7 @@ async def test_request_logging_redacts_private_knowledge_path_and_parameters() -
 
     assert result == {
         "message": "HTTP Request",
-        "path": "/api/admin/knowledge/{private}",
+        "path": "/api/knowledge/{private}",
         "method": "GET",
         "path_params": {},
     }

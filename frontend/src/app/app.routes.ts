@@ -1,24 +1,17 @@
 import { Routes } from '@angular/router';
-import { authGuard, loginGuard, workspaceEntryGuard } from './core/auth/auth.guard';
+import { authGuard, loginGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
-  {
-    path: '',
-    canActivate: [workspaceEntryGuard],
-    loadComponent: () =>
-      import('./core/auth/workspace-entry.component').then((m) => m.WorkspaceEntryComponent),
-    pathMatch: 'full',
-  },
   {
     path: 'login',
     canMatch: [loginGuard],
     loadChildren: () => import('./features/auth/auth.routes').then((m) => m.authRoutes),
   },
   {
-    path: 'admin-panel',
+    path: '',
     canActivate: [authGuard],
     loadChildren: () =>
-      import('./features/admin-panel/admin-panel.routes').then((m) => m.adminPanelRoutes),
+      import('./features/workspace/workspace.routes').then((m) => m.workspaceRoutes),
   },
   {
     path: '**',

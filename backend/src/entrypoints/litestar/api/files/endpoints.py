@@ -24,12 +24,12 @@ from entrypoints.litestar.api.parameters import (
 
 class FilesApiController(Controller):
     path = "/files"
-    tags = ["admin files"]
+    tags = ["files"]
 
     @post(
         "",
         description="Upload a managed file.",
-        name="admin-files-upload-api-handler",
+        name="files-upload-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
     )
     async def upload_file(
@@ -70,7 +70,7 @@ class FilesApiController(Controller):
     @get(
         "",
         description="List managed files.",
-        name="admin-files-list-api-handler",
+        name="files-list-api-handler",
     )
     async def list_files(
         self,
@@ -84,7 +84,7 @@ class FilesApiController(Controller):
     @get(
         "/{file_id:str}",
         description="Get managed file metadata.",
-        name="admin-files-detail-api-handler",
+        name="files-detail-api-handler",
     )
     async def get_file(
         self,
@@ -98,7 +98,7 @@ class FilesApiController(Controller):
     @put(
         "/{file_id:str}",
         description="Update managed file metadata.",
-        name="admin-files-update-api-handler",
+        name="files-update-api-handler",
     )
     async def update_file(
         self,
@@ -125,7 +125,7 @@ class FilesApiController(Controller):
     @delete(
         "/{file_id:str}",
         description="Delete a managed file.",
-        name="admin-files-delete-api-handler",
+        name="files-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_file(
@@ -136,4 +136,4 @@ class FilesApiController(Controller):
         await file_service.delete_file(file_id=file_id)
 
 
-admin_router = DishkaRouter("", route_handlers=[FilesApiController])
+api_router = DishkaRouter("", route_handlers=[FilesApiController])

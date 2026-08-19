@@ -7,7 +7,7 @@ import { verifyLighthouseReports } from './lighthouse_report_verifier.mjs';
 
 const expectedUrls = [
   'http://127.0.0.1:4210/login',
-  'http://127.0.0.1:4210/admin-panel/dashboard',
+  'http://127.0.0.1:4210/',
 ];
 
 test('accepts only fresh complete CSR Lighthouse reports for every configured route', async () => {

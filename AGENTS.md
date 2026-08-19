@@ -44,12 +44,13 @@ UI route.
   context. Bad UX includes theme flashing during navigation or page load, controls that are hard to
   reach or understand, misleading button hierarchy, unclear loading/error states, layout shifts, and
   interfaces that force the user to guess what to do next.
-- Every new HTTP handler must be explicitly classified as public, admin, or internal before
-  implementation. Public API stays under `/api/*`, and admin-panel API stays under `/api/admin/*`.
-  Admin UI flows must not reuse public routes when they need privileged data, privileged controls,
-  or behavior that may diverge later; duplicate the transport handler instead and keep shared
-  schemas/use cases below the HTTP boundary.
-- Keep the admin dashboard as a standalone cross-domain composition page; dashboard
+- Every new HTTP handler must be explicitly classified as anonymous, protected, or internal before
+  implementation. Anonymous API stays under `/api/*`; protected product APIs mount directly under
+  `/api/<domain>` with no legacy product-namespace aliases. Workspace flows must not reuse
+  anonymous routes when they need privileged data, privileged controls, or behavior that may diverge
+  later; duplicate the transport handler instead and keep shared schemas/use cases below the HTTP
+  boundary.
+- Keep the workspace dashboard as a standalone cross-domain composition page; dashboard
   widgets and business logic remain owned by their source domains.
 - Do not add default values in real production code. API parameters, schemas, dataclasses, settings, helpers, services, and infrastructure-facing code should require callers or environment configuration to pass values explicitly. Filter dataclasses may define defaults for omitted filters, pagination, relationship-loading switches, and list-mode switches when the default means "do not apply this filter" or preserves the normal list behavior; tests, test helpers, and factories may keep defaults when they make test setup clearer.
 - Avoid `None`/`null` in production schemas, DTOs, and persisted structured content when a truthful
@@ -137,4 +138,4 @@ UI route.
 - More specific instructions live in nested `AGENTS.md` files under `infra/`, `backend/`,
   `backend/src/core/`, `backend/src/infra/postgresql/`, `backend/tests/`, `frontend/`,
   `frontend/src/app/`, `frontend/src/app/core/editor/`, and
-  `frontend/src/app/features/admin-panel/`.
+  `frontend/src/app/features/workspace/`.

@@ -65,7 +65,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         )
 
         response = self.api.client.get(
-            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+            "/api/knowledge/files/11111111111111111111111111111111/content",
         )
 
         self.asserts.status(response=response, expected_status=codes.OK)
@@ -90,7 +90,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         )
 
         response = self.api.client.get(
-            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+            "/api/knowledge/files/11111111111111111111111111111111/content",
         )
 
         self.asserts.status(response=response, expected_status=codes.OK)
@@ -110,7 +110,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         )
 
         response = self.api.client.get(
-            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+            "/api/knowledge/files/11111111111111111111111111111111/content",
         )
 
         self.asserts.status(response=response, expected_status=codes.OK)
@@ -131,7 +131,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         )
 
         response = self.api.client.get(
-            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+            "/api/knowledge/files/11111111111111111111111111111111/content",
         )
 
         self.asserts.status(response=response, expected_status=codes.OK)
@@ -151,7 +151,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         )
 
         response = self.api.client.get(
-            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+            "/api/knowledge/files/11111111111111111111111111111111/content",
         )
 
         self.asserts.status(response=response, expected_status=codes.OK)
@@ -162,7 +162,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.use_case.get_file_content.side_effect = KnowledgeFileNotFoundError
 
         response = self.api.client.get(
-            "/api/admin/knowledge/files/11111111111111111111111111111111/content",
+            "/api/knowledge/files/11111111111111111111111111111111/content",
         )
 
         self.asserts.error_message(
@@ -176,14 +176,14 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.use_case.upload_attachment.return_value = file
 
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{file.item_id}/attachments",
+            f"/api/knowledge/items/{file.item_id}/attachments",
             data={"name": "Résumé"},
             files={"file": ("private.html", b"<script>", "text/html")},
         )
 
         self.asserts.status(response=response, expected_status=codes.CREATED)
         body = response.json()
-        assert body["contentPath"] == f"/api/admin/knowledge/files/{file.id}/content"
+        assert body["contentPath"] == f"/api/knowledge/files/{file.id}/content"
         assert "relativePath" not in body
         assert "url" not in body
 
@@ -200,7 +200,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.use_case.upload_attachment.return_value = file
 
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{file.item_id}/editor-images",
+            f"/api/knowledge/items/{file.item_id}/editor-images",
             files={"file": ("private.png", b"png-bytes", "image/png")},
         )
 
@@ -209,7 +209,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         assert body["kind"] == KnowledgeFileKind.ATTACHMENT
         assert body["processing"] == KnowledgeFileProcessing.NORMALIZED_RASTER_IMAGE
         assert body["mimeType"] == "image/webp"
-        assert body["contentPath"] == f"/api/admin/knowledge/files/{file.id}/content"
+        assert body["contentPath"] == f"/api/knowledge/files/{file.id}/content"
         params = self.use_case.upload_attachment.await_args.kwargs["params"]
         assert params.item_id == file.item_id
         assert params.author_username == TEST_OWNER_USERNAME
@@ -229,7 +229,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
 
     def test_editor_image_upload_rejects_disallowed_declared_mime(self) -> None:
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{'2' * 32}/editor-images",
+            f"/api/knowledge/items/{'2' * 32}/editor-images",
             files={"file": ("private.gif", b"gif-bytes", "image/gif")},
         )
 
@@ -240,7 +240,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.use_case.upload_attachment.side_effect = KnowledgeItemNotFoundError
 
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{'2' * 32}/editor-images",
+            f"/api/knowledge/items/{'2' * 32}/editor-images",
             files={"file": ("private.png", b"png-bytes", "image/png")},
         )
 
@@ -259,7 +259,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.use_case.upload_attachment.return_value = file
 
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{file.item_id}/attachments",
+            f"/api/knowledge/items/{file.item_id}/attachments",
             data={"name": "Large"},
             files={
                 "file": (
@@ -285,7 +285,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         mime_type: str,
     ) -> None:
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{'2' * 32}/attachments",
+            f"/api/knowledge/items/{'2' * 32}/attachments",
             data={"name": "File"},
             files={"file": (filename, b"x", mime_type)},
         )
@@ -298,7 +298,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
         self.use_case.upload_attachment.return_value = file
 
         response = self.api.client.post(
-            f"/api/admin/knowledge/items/{file.item_id}/attachments",
+            f"/api/knowledge/items/{file.item_id}/attachments",
             data={"name": "Private"},
             files={"file": ("private.bin", b"x", "application/octet-stream")},
         )
@@ -320,7 +320,7 @@ class TestKnowledgeFilesApi(ApiTestCase):
 
         with patch.object(PostCommitActions, "add", autospec=True) as add_action:
             response = self.api.client.delete(
-                f"/api/admin/knowledge/items/{file.item_id}/attachments/{file.id}",
+                f"/api/knowledge/items/{file.item_id}/attachments/{file.id}",
             )
 
         self.asserts.status(response=response, expected_status=codes.NO_CONTENT)

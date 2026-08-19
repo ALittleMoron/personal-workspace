@@ -11,8 +11,8 @@ import { I18nService } from './core/i18n/i18n.service';
 import { LocalizedTitleStrategy } from './core/routing/localized-title.strategy';
 import { NotFoundPageComponent } from './features/not-found/pages/not-found-page/not-found-page.component';
 import { createI18nTestingValue } from './testing/i18n-testing';
-import { CalendarService } from './features/admin-panel/services/calendar.service';
-import { AdminToolsService } from './features/admin-panel/services/admin-tools.service';
+import { CalendarService } from './features/workspace/services/calendar.service';
+import { ToolsService } from './features/workspace/services/tools.service';
 
 describe('application routes', () => {
   let router: Router;
@@ -37,7 +37,7 @@ describe('application routes', () => {
           },
         },
         { provide: CalendarService, useValue: { getCalendar: () => NEVER } },
-        { provide: AdminToolsService, useValue: { getCacheStatus: () => NEVER } },
+        { provide: ToolsService, useValue: { getCacheStatus: () => NEVER } },
       ],
     });
     router = TestBed.inject(Router);
@@ -62,30 +62,30 @@ describe('application routes', () => {
     expect(router.url).toBe('/login');
   });
 
-  it('sends an authenticated browser root to the workspace dashboard', async () => {
+  it('renders the authenticated workspace dashboard at the root without a redirect', async () => {
     authState.set({ status: 'authenticated', user: { username: 'owner' } });
     await RouterTestingHarness.create();
 
     await router.navigateByUrl('/');
 
-    expect(router.url).toBe('/admin-panel/dashboard');
+    expect(router.url).toBe('/');
   });
 
-  it('sends an anonymous admin route to login with its safe return URL', async () => {
+  it('sends an anonymous workspace route to login with its safe return URL', async () => {
     await RouterTestingHarness.create();
 
-    await router.navigateByUrl('/admin-panel/knowledge/people');
+    await router.navigateByUrl('/knowledge/people?filter=active');
 
-    expect(router.url).toBe('/login?returnUrl=%2Fadmin-panel%2Fknowledge%2Fpeople');
+    expect(router.url).toBe('/login?returnUrl=%2Fknowledge%2Fpeople%3Ffilter%3Dactive');
   });
 
-  it('sends an authenticated login route to the workspace dashboard', async () => {
+  it('sends an authenticated login route to the workspace root', async () => {
     authState.set({ status: 'authenticated', user: { username: 'owner' } });
     await RouterTestingHarness.create();
 
     await router.navigateByUrl('/login');
 
-    expect(router.url).toBe('/admin-panel/dashboard');
+    expect(router.url).toBe('/');
   });
 
   it.each(['/ru/updates', '/updates', '/how-this-site-is-built', '/missing-page'])(
@@ -107,4 +107,17 @@ describe('application routes', () => {
     expect(router.url).toBe('/missing-page');
     expect(harness.routeNativeElement?.querySelector('h1')).not.toBeNull();
   });
+
+  it.each(['/admin-panel/dashboard', '/dashboard', '/workspace/resumes', '/workspace/tools'])(
+    'keeps authenticated legacy workspace URL %s while showing not found',
+    async (url) => {
+      authState.set({ status: 'authenticated', user: { username: 'owner' } });
+      const harness = await RouterTestingHarness.create();
+
+      await harness.navigateByUrl(url, NotFoundPageComponent);
+
+      expect(router.url).toBe(url);
+      expect(harness.routeNativeElement?.querySelector('h1')).not.toBeNull();
+    },
+  );
 });

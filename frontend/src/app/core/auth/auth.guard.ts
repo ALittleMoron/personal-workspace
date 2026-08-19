@@ -9,35 +9,24 @@ type GuardDecision = boolean | UrlTree;
 export const authGuard: CanActivateFn = (_route, state): Observable<GuardDecision> => {
   const router = inject(Router);
   return resolveAuthState().pipe(
-    map((authState) =>
-      authState.status === 'authenticated'
-        ? true
-        : router.createUrlTree(['/login'], {
-            queryParams: { returnUrl: sanitizeReturnUrl(state.url) ?? undefined },
-          }),
-    ),
+    map((authState) => {
+      if (authState.status === 'authenticated') {
+        return true;
+      }
+      const pathname = pathnameOf(state.url);
+      return router.createUrlTree(['/login'], {
+        queryParams: {
+          returnUrl: pathname === '/' ? undefined : (sanitizeReturnUrl(state.url) ?? undefined),
+        },
+      });
+    }),
   );
 };
 
 export const loginGuard: CanMatchFn = (): Observable<GuardDecision> => {
   const router = inject(Router);
   return resolveAuthState().pipe(
-    map((authState) =>
-      authState.status === 'authenticated'
-        ? router.createUrlTree(['/admin-panel/dashboard'])
-        : true,
-    ),
-  );
-};
-
-export const workspaceEntryGuard: CanActivateFn = (): Observable<GuardDecision> => {
-  const router = inject(Router);
-  return resolveAuthState().pipe(
-    map((authState) =>
-      authState.status === 'authenticated'
-        ? router.createUrlTree(['/admin-panel/dashboard'])
-        : router.createUrlTree(['/login']),
-    ),
+    map((authState) => (authState.status === 'authenticated' ? router.createUrlTree(['/']) : true)),
   );
 };
 
@@ -52,8 +41,8 @@ export function sanitizeReturnUrl(value: string | null | undefined): string | nu
     return null;
   }
 
-  const path = value.split(/[?#]/, 1)[0];
-  if (path !== '/' && path !== '/admin-panel' && !path.startsWith('/admin-panel/')) {
+  const path = pathnameOf(value);
+  if (!isWorkspaceUrl(path)) {
     return null;
   }
 
@@ -61,6 +50,22 @@ export function sanitizeReturnUrl(value: string | null | undefined): string | nu
     return null;
   }
   return value;
+}
+
+function isWorkspaceUrl(path: string): boolean {
+  return (
+    path === '/' ||
+    path === '/resumes' ||
+    /^\/resumes\/[^/]+$/u.test(path) ||
+    path === '/knowledge/people' ||
+    /^\/knowledge\/people\/[^/]+$/u.test(path) ||
+    path === '/knowledge/dates' ||
+    /^\/knowledge\/dates\/[^/]+$/u.test(path)
+  );
+}
+
+function pathnameOf(url: string): string {
+  return url.split(/[?#]/, 1)[0];
 }
 
 function resolveAuthState(): Observable<AuthState> {

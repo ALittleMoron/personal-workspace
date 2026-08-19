@@ -3,7 +3,7 @@ const collectMode = process.env.LHCI_COLLECT_MODE ?? 'anonymous';
 const collectTarget =
   collectMode === 'authenticated'
     ? {
-        url: `${LHCI_ORIGIN}/admin-panel/dashboard`,
+        url: `${LHCI_ORIGIN}/`,
         extraHeaders: {
           'x-csp-nonce': 'lighthouse-csp-nonce',
           'x-lighthouse-authenticated': 'owner',

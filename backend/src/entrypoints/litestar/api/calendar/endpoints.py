@@ -8,9 +8,9 @@ from entrypoints.litestar.api.parameters import CalendarReferenceDateQuery, Cale
 from infra.config.constants import constants
 
 
-class AdminCalendarApiController(Controller):
+class CalendarApiController(Controller):
     path = "/calendar"
-    tags = ["admin calendar"]
+    tags = ["calendar"]
     include_in_schema = False
     response_headers = {
         constants.knowledge_files.cache_control_header_name: (
@@ -24,7 +24,7 @@ class AdminCalendarApiController(Controller):
             "Get the current author's memorable dates and birthdays for the selected calendar "
             "window."
         ),
-        name="admin-calendar-api-handler",
+        name="calendar-api-handler",
         status_code=status_codes.HTTP_200_OK,
         cache=False,
     )
@@ -44,4 +44,4 @@ class AdminCalendarApiController(Controller):
         )
 
 
-admin_router = DishkaRouter("", route_handlers=[AdminCalendarApiController])
+api_router = DishkaRouter("", route_handlers=[CalendarApiController])

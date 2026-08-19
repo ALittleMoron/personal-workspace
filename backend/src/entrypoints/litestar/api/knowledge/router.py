@@ -1,22 +1,22 @@
 from dishka.integrations.litestar import DishkaRouter
 
 from entrypoints.litestar.api.knowledge.dates.endpoints import (
-    AdminKnowledgeDatesApiController,
+    KnowledgeDatesApiController,
 )
 from entrypoints.litestar.api.knowledge.files.endpoints import (
-    AdminKnowledgeFilesApiController,
+    KnowledgeFilesApiController,
 )
 from entrypoints.litestar.api.knowledge.items.endpoints import (
-    AdminKnowledgeTagsApiController,
+    KnowledgeTagsApiController,
 )
-from entrypoints.litestar.api.knowledge.people.endpoints import AdminPeopleApiController
+from entrypoints.litestar.api.knowledge.people.endpoints import PeopleApiController
 
-admin_router = DishkaRouter(
+api_router = DishkaRouter(
     "",
     route_handlers=[
-        AdminKnowledgeDatesApiController,
-        AdminPeopleApiController,
-        AdminKnowledgeTagsApiController,
-        AdminKnowledgeFilesApiController,
+        KnowledgeDatesApiController,
+        PeopleApiController,
+        KnowledgeTagsApiController,
+        KnowledgeFilesApiController,
     ],
 )

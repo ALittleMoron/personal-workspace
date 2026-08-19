@@ -36,9 +36,9 @@ unchecked entries remain active work unless a later product decision supersedes 
 - [x] Resume
   - [x] Store private structured ATS-oriented resume documents outside the knowledge database.
   - [x] Store each resume as a single-language document with required saved RU/EN language.
-  - [x] Add owner/admin backend CRUD API under `/api/admin/resumes`.
+  - [x] Add protected backend CRUD API under `/api/resumes`.
   - [x] Scope resume CRUD to the authenticated author so users only list and mutate their own resumes.
-  - [x] Add owner/admin Workspace navigation and routes under `/admin-panel/workspace/resumes`.
+  - [x] Add workspace navigation and routes at `/resumes` and `/resumes/:id`.
   - [x] Add list, create with language selection, detail edit, language badge, selected-language preview, and delete UI.
   - [x] Keep resumes private: no public pages, sitemap entries, SEO, or themes in v1.
   - [x] Fix resume multilines fields: text with \\n to array.
@@ -52,7 +52,7 @@ unchecked entries remain active work unless a later product decision supersedes 
     - [x] Step-by-step maximize resume export ATS score.
     - [x] Fix readability of exported resume
 
-- [ ] Improve resume and Knowledge editing ergonomics based on real single-administrator use, while
+- [ ] Improve resume and Knowledge editing ergonomics based on real single-owner use, while
   preserving sanitized Markdown rendering and protected file delivery.
 
 ## Calendar
@@ -63,7 +63,7 @@ unchecked entries remain active work unless a later product decision supersedes 
 
 ## Knowledge database
 
-Each knowledge item has its own subfolder in "knowledge database" folder on side-panel in admin panel.
+Each knowledge item has its own subfolder in the Knowledge section of the workspace sidebar.
 
 - [ ] Workspace
   - [ ] Main page
@@ -73,7 +73,8 @@ Each knowledge item has its own subfolder in "knowledge database" folder on side
     - [ ] Statistics
       - [ ] Files per category count - badge next to folder name with amount of files.
   - [ ] Access
-    - [x] V1: Owner/admin only, per-account knowledge items (users can see only their own items)
+    - [x] V1: configured-owner access only; Knowledge data remains author-scoped for future
+      multi-user access.
 - [ ] Knowledge item
   - [ ] Books
     - [ ] All books page
@@ -101,6 +102,7 @@ Each knowledge item has its own subfolder in "knowledge database" folder on side
 
 ## Refactoring
 
-- [ ] Remove all admin prefixes. There will be no separated admin panels in project.
-- [ ] Remove `/admin-panel` and `/api/admin` prefixes when `/` becomes the workspace.
+- [x] Remove obsolete product prefixes; the workspace has no separate management panel.
+- [x] Serve the protected workspace dashboard directly at `/` and protected product APIs at
+  `/api/<domain>`.
 - [x] Remove the inherited how-this-site-is-built, updates, sitemap, robots, SEO, and SSR artifacts.

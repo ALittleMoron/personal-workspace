@@ -81,7 +81,7 @@ describe('static frontend runtime', () => {
     expect(await response.text()).toBe('stable asset');
   });
 
-  it.each(['/login', '/admin-panel/dashboard'])(
+  it.each(['/login', '/'])(
     'serves the nonce-injected index shell for the SPA navigation %s',
     async (path) => {
       const response = await fetch(`${origin}${path}`, {
@@ -105,7 +105,7 @@ describe('static frontend runtime', () => {
     ['/missing.js', 'text/html'],
     ['/missing.png', 'image/avif,image/webp'],
     ['/login', 'application/json'],
-    ['/admin-panel/dashboard', 'text/html;q=0'],
+    ['/', 'text/html;q=0'],
   ])('returns 404 instead of the shell for %s requested as %s', async (path, accept) => {
     const response = await fetch(`${origin}${path}`, {
       headers: { Accept: accept, 'X-CSP-Nonce': VALID_NONCE },

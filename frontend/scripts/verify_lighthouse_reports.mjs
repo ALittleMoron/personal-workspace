@@ -5,7 +5,7 @@ import { verifyLighthouseReports } from './lighthouse_report_verifier.mjs';
 const origin = 'http://127.0.0.1:4210';
 const expectedUrls = [
   `${origin}/login`,
-  `${origin}/admin-panel/dashboard`,
+  `${origin}/`,
 ];
 
 await verifyLighthouseReports({

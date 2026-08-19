@@ -1,0 +1,43 @@
+.workspace-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.workspace-title {
+  line-height: 1.2;
+}
+
+.workspace-header-controls {
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.workspace-current-user {
+  min-width: 0;
+  max-width: min(16rem, 40vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 575.98px) {
+  :host nav {
+    padding-inline: 1rem !important;
+  }
+
+  [data-testid='workspace-header-primary'],
+  .workspace-header-controls {
+    width: 100%;
+  }
+
+  .workspace-header-controls {
+    justify-content: flex-start !important;
+  }
+
+  .workspace-current-user {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}

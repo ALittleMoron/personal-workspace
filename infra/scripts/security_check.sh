@@ -697,7 +697,7 @@ run_private_panel_configuration_check() {
     require_file_contains "$nginx_template" "listen 18081;" "private MinIO Console listener"
     require_file_contains "$nginx_template" "listen 18082;" "private Databasus listener"
     require_file_contains "${repo_dir}/infra/nginx/nginx.conf" "map \$uri \$privacy_safe_uri {" "privacy-safe URI mapping"
-    require_file_contains "${repo_dir}/infra/nginx/nginx.conf" "~^/api/admin/knowledge(?:/|\$) \"/api/admin/knowledge/{private}\";" "private knowledge URI redaction"
+    require_file_contains "${repo_dir}/infra/nginx/nginx.conf" "~^/api/knowledge(?:/|\$) \"/api/knowledge/{private}\";" "private knowledge URI redaction"
     require_file_contains "${repo_dir}/infra/nginx/nginx.conf" "log_format privacy_safe '\$request_method \$privacy_safe_uri \$server_protocol \$status';" "privacy-safe main access log format"
     require_file_contains "${repo_dir}/infra/nginx/nginx.conf" "access_log /dev/stdout privacy_safe;" "privacy-safe main access log selection"
     require_file_not_contains "${repo_dir}/infra/nginx/nginx.conf" "\$request_uri" "raw request URI in access log configuration"

@@ -9,12 +9,12 @@ from entrypoints.litestar.api.wiki_links.schemas import WikiLinkTargetsResponseS
 
 class WikiLinksApiController(Controller):
     path = "/wiki-links"
-    tags = ["admin wiki links"]
+    tags = ["wiki links"]
 
     @get(
         "/targets",
         description="Get available typed wiki link targets.",
-        name="admin-wiki-links-targets-list-api-handler",
+        name="wiki-links-targets-list-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def list_wiki_link_targets(
@@ -26,4 +26,4 @@ class WikiLinksApiController(Controller):
         return WikiLinkTargetsResponseSchema.from_domain_schema(schema=targets)
 
 
-admin_router = DishkaRouter("", route_handlers=[WikiLinksApiController])
+api_router = DishkaRouter("", route_handlers=[WikiLinksApiController])

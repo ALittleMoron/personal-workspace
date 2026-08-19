@@ -49,7 +49,7 @@ describe('I18nService', () => {
 
   it('falls back to the backend default when the stored language is unsupported', () => {
     localStorage.setItem('chosenLanguage', 'de');
-    window.history.replaceState({}, '', '/admin-panel/dashboard');
+    window.history.replaceState({}, '', '/');
 
     service.initialize().subscribe();
 

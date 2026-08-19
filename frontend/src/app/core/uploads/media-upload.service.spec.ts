@@ -33,7 +33,7 @@ describe('MediaUploadService', () => {
         uploadedId = uploaded.id;
       });
 
-    const request = httpMock.expectOne((item) => item.url.endsWith('/api/admin/files'));
+    const request = httpMock.expectOne((item) => item.url.endsWith('/api/files'));
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toBeInstanceOf(FormData);
     const formData = request.request.body as FormData;
@@ -52,7 +52,7 @@ describe('MediaUploadService', () => {
       accessUrl = file.accessUrl;
     });
 
-    const request = httpMock.expectOne((item) => item.url.endsWith('/api/admin/files/file-1'));
+    const request = httpMock.expectOne((item) => item.url.endsWith('/api/files/file-1'));
     expect(request.request.method).toBe('GET');
     request.flush(fileDto());
 

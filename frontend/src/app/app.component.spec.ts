@@ -9,11 +9,11 @@ import { AuthSessionService } from './core/auth/auth-session.service';
 import { createI18nTestingValue } from './testing/i18n-testing';
 
 @Component({ standalone: true, template: '<button id="workspace-control">Workspace</button>' })
-class AdminRouteComponent {
+class WorkspaceRouteComponent {
   static instanceCount = 0;
 
   constructor() {
-    AdminRouteComponent.instanceCount += 1;
+    WorkspaceRouteComponent.instanceCount += 1;
   }
 }
 
@@ -34,13 +34,13 @@ describe('AppComponent', () => {
     loginRequired = signal(false);
     closeOverlay = jest.fn(() => loginRequired.set(false));
     login = jest.fn(() => of({ username: 'owner' }));
-    AdminRouteComponent.instanceCount = 0;
+    WorkspaceRouteComponent.instanceCount = 0;
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
         provideRouter([
-          { path: 'admin-panel', component: AdminRouteComponent },
+          { path: '', component: WorkspaceRouteComponent },
           { path: 'login', component: LoginRouteComponent },
         ]),
         {
@@ -79,7 +79,7 @@ describe('AppComponent', () => {
 
   it('keeps the routed workspace mounted and inaccessible behind the login-required dialog', async () => {
     const router = TestBed.inject(Router);
-    await router.navigateByUrl('/admin-panel');
+    await router.navigateByUrl('/');
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     const workspace = element.querySelector('#workspace-control');
@@ -91,7 +91,7 @@ describe('AppComponent', () => {
     expect(background?.hasAttribute('inert')).toBe(true);
     expect(background?.getAttribute('aria-hidden')).toBe('true');
     expect(element.querySelector('#workspace-control')).toBe(workspace);
-    expect(AdminRouteComponent.instanceCount).toBe(1);
+    expect(WorkspaceRouteComponent.instanceCount).toBe(1);
     expect(element.querySelector('router-outlet')).not.toBeNull();
     expect(element.querySelector('[role="dialog"]')).not.toBeNull();
     expect(element.querySelector('[role="dialog"] button[aria-label="Close"]')).toBeNull();
@@ -99,7 +99,7 @@ describe('AppComponent', () => {
 
   it('wraps keyboard focus within the login-required dialog', async () => {
     const router = TestBed.inject(Router);
-    await router.navigateByUrl('/admin-panel');
+    await router.navigateByUrl('/');
     loginRequired.set(true);
     fixture.detectChanges();
 
@@ -122,7 +122,7 @@ describe('AppComponent', () => {
   it('restores prior focus and preserves the routed instance after successful overlay login', async () => {
     jest.useFakeTimers();
     const router = TestBed.inject(Router);
-    await router.navigateByUrl('/admin-panel');
+    await router.navigateByUrl('/');
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
     const workspace = element.querySelector('#workspace-control') as HTMLButtonElement;
@@ -145,8 +145,8 @@ describe('AppComponent', () => {
     expect(closeOverlay).toHaveBeenCalledTimes(1);
     expect(element.querySelector('[role="dialog"]')).toBeNull();
     expect(element.querySelector('#workspace-control')).toBe(workspace);
-    expect(AdminRouteComponent.instanceCount).toBe(1);
-    expect(router.url).toBe('/admin-panel');
+    expect(WorkspaceRouteComponent.instanceCount).toBe(1);
+    expect(router.url).toBe('/');
     expect(document.activeElement).toBe(workspace);
   });
 

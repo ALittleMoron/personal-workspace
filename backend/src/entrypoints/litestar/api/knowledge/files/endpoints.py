@@ -37,9 +37,9 @@ from infra.config.constants import constants
 from infra.post_commit_actions import PostCommitActions
 
 
-class AdminKnowledgeFilesApiController(Controller):
+class KnowledgeFilesApiController(Controller):
     path = "/knowledge"
-    tags = ["admin knowledge files"]
+    tags = ["knowledge files"]
     include_in_schema = False
     response_headers = {
         constants.knowledge_files.cache_control_header_name: (
@@ -50,7 +50,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @put(
         "/people/{person_id:str}/photo",
         description="Replace a private person photo.",
-        name="admin-knowledge-person-photo-replace-api-handler",
+        name="knowledge-person-photo-replace-api-handler",
         status_code=status_codes.HTTP_200_OK,
         request_max_body_size=constants.knowledge_files.photo_request_max_body_size_bytes,
     )
@@ -94,7 +94,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @delete(
         "/people/{person_id:str}/photo",
         description="Delete a private person photo.",
-        name="admin-knowledge-person-photo-delete-api-handler",
+        name="knowledge-person-photo-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_person_photo(  # noqa: PLR0913
@@ -120,7 +120,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @post(
         "/items/{item_id:str}/attachments",
         description="Upload a private knowledge item attachment.",
-        name="admin-knowledge-attachment-upload-api-handler",
+        name="knowledge-attachment-upload-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
         request_max_body_size=constants.knowledge_files.attachment_request_max_body_size_bytes,
     )
@@ -156,7 +156,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @post(
         "/items/{item_id:str}/editor-images",
         description="Upload a normalized private image for the knowledge Markdown editor.",
-        name="admin-knowledge-editor-image-upload-api-handler",
+        name="knowledge-editor-image-upload-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
         request_max_body_size=constants.knowledge_files.photo_request_max_body_size_bytes,
     )
@@ -192,7 +192,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @put(
         "/items/{item_id:str}/attachments/{file_id:str}",
         description="Rename a private knowledge item attachment.",
-        name="admin-knowledge-attachment-rename-api-handler",
+        name="knowledge-attachment-rename-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def rename_attachment(  # noqa: PLR0913
@@ -224,7 +224,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @delete(
         "/items/{item_id:str}/attachments/{file_id:str}",
         description="Delete a private knowledge item attachment.",
-        name="admin-knowledge-attachment-delete-api-handler",
+        name="knowledge-attachment-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_attachment(  # noqa: PLR0913
@@ -252,7 +252,7 @@ class AdminKnowledgeFilesApiController(Controller):
     @get(
         "/files/{file_id:str}/content",
         description="Stream private knowledge file content after an author check.",
-        name="admin-knowledge-file-content-api-handler",
+        name="knowledge-file-content-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def get_file_content(

@@ -43,19 +43,19 @@ class TestI18nCatalog:
             for status in PublishStatusEnum:
                 assert messages[f"enum.publishStatus.{status.value}"]
 
-    def test_retained_admin_workspaces_are_localized_in_both_languages(self) -> None:
+    def test_retained_workspace_copy_is_localized_in_both_languages(self) -> None:
         required_keys = {
-            "adminPanel.section.dashboard",
-            "adminPanel.section.resumes",
-            "adminPanel.section.tools",
-            "adminPanel.section.knowledge",
-            "adminPanel.section.people",
-            "adminPanel.section.dates",
+            "workspace.section.dashboard",
+            "workspace.section.resumes",
+            "workspace.section.tools",
+            "workspace.section.knowledge",
+            "workspace.section.people",
+            "workspace.section.dates",
             "knowledgePeople.relationshipTypes.manage",
             "knowledgePeople.attachmentDownloadError",
             "knowledgeDates.attachmentDownloadError",
-            "adminTools.cache.title",
-            "adminResumeWorkspace.title",
+            "tools.cache.title",
+            "resumeWorkspace.title",
         }
 
         for language in LanguageEnum:

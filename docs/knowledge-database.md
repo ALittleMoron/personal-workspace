@@ -1,7 +1,7 @@
 # Knowledge Database
 
-Knowledge is a private administrator workspace. Its current typed item workspaces are People and
-Dates. It is not a public content API; all of its browser UI is Angular CSR.
+Knowledge is a private workspace. Its current typed item workspaces are People and Dates. It is not
+a public content API; all of its browser UI is Angular CSR.
 
 ## Model and boundaries
 
@@ -24,12 +24,12 @@ do not substitute a JSON/EAV field bag or a universal dynamic form.
 
 ## Access and API
 
-Knowledge controllers live below `/api/admin/knowledge/*`, are excluded from OpenAPI and send
-`Cache-Control: no-store`. The whole `/api/admin/*` router requires the current authenticated owner;
+Knowledge controllers live below `/api/knowledge/*`, are excluded from OpenAPI and send
+`Cache-Control: no-store`. The protected route group requires the current authenticated owner;
 absent, malformed, or expired authentication is rejected. The sole environment-configured owner
 supplies `author_username`; the authenticator does not introduce account or team tables.
 
-| Area | Current API |
+| Area | Current API relative to `/api/knowledge` |
 | --- | --- |
 | People | CRUD at `/people`, relationship-type CRUD at `/people/relationship-types`, protected photo replacement/removal at `/people/{personId}/photo`. |
 | Dates | CRUD at `/dates`; list supports search, AND-tag and related-Person filters and calendar/update/name ordering. |
@@ -65,11 +65,10 @@ hide the original request or transaction failure.
 
 ## Workspace and calendar
 
-Protected CSR routes are `/admin-panel/knowledge/people`,
-`/admin-panel/knowledge/people/:id`, `/admin-panel/knowledge/dates`, and
-`/admin-panel/knowledge/dates/:id`. They use explicit typed forms rather than a schema-driven form
-renderer. `/admin-panel/dashboard` composes its Calendar and operational-tools widgets without
-owning their business logic; see [Calendar](calendar.md).
+Protected CSR routes are `/knowledge/people`, `/knowledge/people/:id`, `/knowledge/dates`, and
+`/knowledge/dates/:id`. They use explicit typed forms rather than a schema-driven form renderer.
+`/` directly hosts the workspace dashboard, which composes its Calendar and operational-tools
+widgets without owning their business logic; see [Calendar](calendar.md).
 
 ## Operations and recovery
 

@@ -17,15 +17,14 @@ from core.auth.schemas import User
 from infra.config.settings import settings
 
 CSRF_EXCLUDED_PATHS = [r"^/api/auth/login$"]
-PROTECTED_AUTH_PATH_PATTERN = re.compile(
-    r"^/api/(?:admin(?:/|$)|auth/(?:session|logout)$|docs(?:/|$))"
+PROTECTED_HTTP_PATH_PATTERN = re.compile(
+    r"^/api/(?:(?:tools|calendar|files|resumes|knowledge|wiki-links)(?:/.*)?|auth/(?:session|logout)|docs(?:/.*)?)$"
 )
-PRIVATE_CACHE_PATH_PATTERN = re.compile(r"^/api/(?:admin|auth|docs)(?:/|$)")
 
 
 class ProtectedPathSessionAuthMiddleware(SessionAuthMiddleware):
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != ScopeType.HTTP or not PROTECTED_AUTH_PATH_PATTERN.match(scope["path"]):
+        if scope["type"] != ScopeType.HTTP or not PROTECTED_HTTP_PATH_PATTERN.match(scope["path"]):
             await self.app(scope, receive, send)
             return
         await super().__call__(scope, receive, send)
@@ -91,7 +90,7 @@ def create_csrf_config() -> CSRFConfig:
 
 
 async def set_private_cache_control(message: Message, scope: Scope) -> None:
-    if message["type"] != "http.response.start" or not PRIVATE_CACHE_PATH_PATTERN.match(
+    if message["type"] != "http.response.start" or not PROTECTED_HTTP_PATH_PATTERN.match(
         scope["path"]
     ):
         return

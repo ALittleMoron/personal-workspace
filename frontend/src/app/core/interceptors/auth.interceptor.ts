@@ -14,7 +14,7 @@ export const authRecoveryInterceptor: HttpInterceptorFn = (request, next) => {
       if (
         error instanceof HttpErrorResponse &&
         error.status === 401 &&
-        isAdminApiRequest(request.url) &&
+        isProtectedApiRequest(request.url) &&
         !request.context.get(SKIP_AUTH_RECOVERY)
       ) {
         auth.clear();
@@ -25,6 +25,11 @@ export const authRecoveryInterceptor: HttpInterceptorFn = (request, next) => {
   );
 };
 
-function isAdminApiRequest(url: string): boolean {
-  return /^(?:https?:\/\/[^/]+)?\/api\/admin(?:\/|$)/.test(url);
+function isProtectedApiRequest(url: string): boolean {
+  try {
+    const pathname = new URL(url, 'https://workspace.local').pathname;
+    return /^\/api\/(?:tools|calendar|files|resumes|knowledge|wiki-links)(?:\/|$)/u.test(pathname);
+  } catch {
+    return false;
+  }
 }

@@ -16,7 +16,7 @@ from core.knowledge.people.schemas import (
     PersonQuickCreateParams,
     PersonUpdateParams,
 )
-from entrypoints.litestar.api.knowledge.people.endpoints import AdminPeopleApiController
+from entrypoints.litestar.api.knowledge.people.endpoints import PeopleApiController
 from tests.test_cases import ApiTestCase
 from tests.unit.conftest import TEST_OWNER_USERNAME
 
@@ -74,9 +74,9 @@ class TestPeopleApi(ApiTestCase):
 
     def test_list_requires_explicit_pagination_and_sort(self) -> None:
         for response in (
-            self.api.get_admin_people(page=None),
-            self.api.get_admin_people(page_size=None),
-            self.api.get_admin_people(sort=None),
+            self.api.get_people(page=None),
+            self.api.get_people(page_size=None),
+            self.api.get_people(sort=None),
         ):
             self.asserts.status(response=response, expected_status=codes.BAD_REQUEST)
 
@@ -89,7 +89,7 @@ class TestPeopleApi(ApiTestCase):
             total_pages=0,
         )
 
-        response = self.api.get_admin_people(
+        response = self.api.get_people(
             page=2,
             page_size=50,
             sort="nameDesc",
@@ -117,7 +117,7 @@ class TestPeopleApi(ApiTestCase):
             total_pages=0,
         )
 
-        response = self.api.get_admin_people(search_query="   ")
+        response = self.api.get_people(search_query="   ")
 
         self.asserts.status(response=response, expected_status=codes.OK)
         self.use_case.list_people.assert_awaited_once_with(
@@ -134,7 +134,7 @@ class TestPeopleApi(ApiTestCase):
     def test_quick_create_maps_names_and_current_author(self) -> None:
         self.use_case.create_person.return_value = person_response()
 
-        response = self.api.post_admin_person(
+        response = self.api.post_person(
             data={"firstName": "Ivan", "lastName": "Ivanov"},
         )
 
@@ -160,7 +160,7 @@ class TestPeopleApi(ApiTestCase):
         self,
         payload: dict[str, str],
     ) -> None:
-        response = self.api.post_admin_person(data=payload)
+        response = self.api.post_person(data=payload)
 
         self.asserts.status(response=response, expected_status=codes.BAD_REQUEST)
         self.use_case.create_person.assert_not_awaited()
@@ -181,7 +181,7 @@ class TestPeopleApi(ApiTestCase):
             "deleteIds": ["4" * 32],
         }
 
-        response = self.api.put_admin_person(person_id=1, data=payload)
+        response = self.api.put_person(person_id=1, data=payload)
 
         self.asserts.status(response=response, expected_status=codes.OK)
         call = self.use_case.update_person.await_args.kwargs
@@ -211,7 +211,7 @@ class TestPeopleApi(ApiTestCase):
         payload = update_payload()
         payload["birthday"] = birthday
 
-        response = self.api.put_admin_person(person_id=1, data=payload)
+        response = self.api.put_person(person_id=1, data=payload)
 
         self.asserts.status(response=response, expected_status=expected_status)
         if expected_status == codes.OK:
@@ -230,7 +230,7 @@ class TestPeopleApi(ApiTestCase):
         else:
             payload["telegram"] = telegram
 
-        response = self.api.put_admin_person(person_id=1, data=payload)
+        response = self.api.put_person(person_id=1, data=payload)
 
         self.asserts.status(response=response, expected_status=codes.BAD_REQUEST)
         self.use_case.update_person.assert_not_awaited()
@@ -238,7 +238,7 @@ class TestPeopleApi(ApiTestCase):
     def test_get_foreign_or_missing_person_uses_same_not_found_contract(self) -> None:
         self.use_case.get_person.side_effect = KnowledgeItemNotFoundError()
 
-        response = self.api.get_admin_person(person_id=404)
+        response = self.api.get_person(person_id=404)
 
         self.asserts.error_message(
             response=response,
@@ -253,7 +253,7 @@ class TestPeopleApi(ApiTestCase):
     def test_delete_forwards_request_datetime(self) -> None:
         self.use_case.delete_person.return_value = ()
 
-        response = self.api.delete_admin_person(person_id=1)
+        response = self.api.delete_person(person_id=1)
 
         self.asserts.status(response=response, expected_status=codes.NO_CONTENT)
         call = self.use_case.delete_person.await_args.kwargs
@@ -262,5 +262,5 @@ class TestPeopleApi(ApiTestCase):
         assert isinstance(call["current_datetime"], datetime)
 
     def test_private_controller_is_hidden_and_uncached(self) -> None:
-        assert AdminPeopleApiController.include_in_schema is False
-        assert AdminPeopleApiController.response_headers == {"Cache-Control": "no-store"}
+        assert PeopleApiController.include_in_schema is False
+        assert PeopleApiController.response_headers == {"Cache-Control": "no-store"}

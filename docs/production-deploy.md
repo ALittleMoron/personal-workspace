@@ -43,8 +43,9 @@ passes the hash to the backend only as `OWNER_PASSWORD_HASH_FILE`. Generate a ne
 with `make -C backend cli command=hashpassword`, store it as a protected deployment secret, and
 redeploy after rotation. Authentication uses an encrypted persistent `HttpOnly`, `SameSite=Strict`
 session cookie whose `Secure` attribute follows `APP_URL_SCHEMA`, plus a separate CSRF cookie/header
-for unsafe authenticated requests. Authentication, private API, and API documentation responses use
-`Cache-Control: no-store`, and failures use one generic invalid-credential response.
+for unsafe authenticated requests. The anonymous login POST uses one generic invalid-credential
+response. Responses from protected private-domain APIs, auth session/logout, and API documentation
+use `Cache-Control: no-store`.
 
 Changing only the password hash prevents future logins with the old password but cannot revoke an
 already copied stateless cookie. Rotate the application session secret to revoke all active cookies.

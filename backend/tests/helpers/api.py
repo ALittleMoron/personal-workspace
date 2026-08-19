@@ -27,7 +27,7 @@ class APIHelper:
     def get_i18n_bundle(self, language: str) -> Response:
         return self.client.get(f"/api/i18n/bundles/{language}")
 
-    def get_admin_people(
+    def get_people(
         self,
         *,
         page: int | None = 1,
@@ -47,31 +47,29 @@ class APIHelper:
             )
             if value is not None
         }
-        return self.client.get("/api/admin/knowledge/people", params=params)
+        return self.client.get("/api/knowledge/people", params=params)
 
-    def get_admin_calendar(self, *, reference_date: str | None, window: str | None) -> Response:
+    def get_calendar(self, *, reference_date: str | None, window: str | None) -> Response:
         params = {
             key: value
             for key, value in (("referenceDate", reference_date), ("window", window))
             if value is not None
         }
-        return self.client.get("/api/admin/calendar", params=params)
+        return self.client.get("/api/calendar", params=params)
 
-    def post_admin_person(self, *, data: dict[str, Any]) -> Response:
-        return self.client.post("/api/admin/knowledge/people", json=data)
+    def post_person(self, *, data: dict[str, Any]) -> Response:
+        return self.client.post("/api/knowledge/people", json=data)
 
-    def get_admin_person(self, *, person_id: int | str) -> Response:
-        return self.client.get(f"/api/admin/knowledge/people/{self._entity_id(person_id)}")
+    def get_person(self, *, person_id: int | str) -> Response:
+        return self.client.get(f"/api/knowledge/people/{self._entity_id(person_id)}")
 
-    def put_admin_person(self, *, person_id: int | str, data: dict[str, Any]) -> Response:
-        return self.client.put(
-            f"/api/admin/knowledge/people/{self._entity_id(person_id)}", json=data
-        )
+    def put_person(self, *, person_id: int | str, data: dict[str, Any]) -> Response:
+        return self.client.put(f"/api/knowledge/people/{self._entity_id(person_id)}", json=data)
 
-    def delete_admin_person(self, *, person_id: int | str) -> Response:
-        return self.client.delete(f"/api/admin/knowledge/people/{self._entity_id(person_id)}")
+    def delete_person(self, *, person_id: int | str) -> Response:
+        return self.client.delete(f"/api/knowledge/people/{self._entity_id(person_id)}")
 
-    def get_admin_knowledge_dates(
+    def get_knowledge_dates(
         self,
         *,
         page: int | None = 1,
@@ -93,112 +91,110 @@ class APIHelper:
             )
             if value is not None
         }
-        return self.client.get("/api/admin/knowledge/dates", params=params)
+        return self.client.get("/api/knowledge/dates", params=params)
 
-    def post_admin_knowledge_date(self, *, data: dict[str, Any]) -> Response:
-        return self.client.post("/api/admin/knowledge/dates", json=data)
+    def post_knowledge_date(self, *, data: dict[str, Any]) -> Response:
+        return self.client.post("/api/knowledge/dates", json=data)
 
-    def get_admin_knowledge_date(self, *, date_id: int | str) -> Response:
-        return self.client.get(f"/api/admin/knowledge/dates/{self._entity_id(date_id)}")
+    def get_knowledge_date(self, *, date_id: int | str) -> Response:
+        return self.client.get(f"/api/knowledge/dates/{self._entity_id(date_id)}")
 
-    def put_admin_knowledge_date(self, *, date_id: int | str, data: dict[str, Any]) -> Response:
-        return self.client.put(f"/api/admin/knowledge/dates/{self._entity_id(date_id)}", json=data)
+    def put_knowledge_date(self, *, date_id: int | str, data: dict[str, Any]) -> Response:
+        return self.client.put(f"/api/knowledge/dates/{self._entity_id(date_id)}", json=data)
 
-    def delete_admin_knowledge_date(self, *, date_id: int | str) -> Response:
-        return self.client.delete(f"/api/admin/knowledge/dates/{self._entity_id(date_id)}")
+    def delete_knowledge_date(self, *, date_id: int | str) -> Response:
+        return self.client.delete(f"/api/knowledge/dates/{self._entity_id(date_id)}")
 
-    def get_admin_knowledge_tags(self, *, search_query: str | None = None) -> Response:
+    def get_knowledge_tags(self, *, search_query: str | None = None) -> Response:
         params = {"searchQuery": search_query} if search_query is not None else None
-        return self.client.get("/api/admin/knowledge/tags", params=params)
+        return self.client.get("/api/knowledge/tags", params=params)
 
-    def post_admin_knowledge_tag(self, *, data: dict[str, Any]) -> Response:
-        return self.client.post("/api/admin/knowledge/tags", json=data)
+    def post_knowledge_tag(self, *, data: dict[str, Any]) -> Response:
+        return self.client.post("/api/knowledge/tags", json=data)
 
-    def put_admin_knowledge_tag(self, *, tag_id: int | str, data: dict[str, Any]) -> Response:
-        return self.client.put(f"/api/admin/knowledge/tags/{self._entity_id(tag_id)}", json=data)
+    def put_knowledge_tag(self, *, tag_id: int | str, data: dict[str, Any]) -> Response:
+        return self.client.put(f"/api/knowledge/tags/{self._entity_id(tag_id)}", json=data)
 
-    def delete_admin_knowledge_tag(self, *, tag_id: int | str) -> Response:
-        return self.client.delete(f"/api/admin/knowledge/tags/{self._entity_id(tag_id)}")
+    def delete_knowledge_tag(self, *, tag_id: int | str) -> Response:
+        return self.client.delete(f"/api/knowledge/tags/{self._entity_id(tag_id)}")
 
-    def get_admin_person_relationship_types(self) -> Response:
-        return self.client.get("/api/admin/knowledge/people/relationship-types")
+    def get_person_relationship_types(self) -> Response:
+        return self.client.get("/api/knowledge/people/relationship-types")
 
-    def post_admin_person_relationship_type(self, *, data: dict[str, Any]) -> Response:
-        return self.client.post("/api/admin/knowledge/people/relationship-types", json=data)
+    def post_person_relationship_type(self, *, data: dict[str, Any]) -> Response:
+        return self.client.post("/api/knowledge/people/relationship-types", json=data)
 
-    def put_admin_person_relationship_type(
+    def put_person_relationship_type(
         self, *, relationship_type_id: int | str, data: dict[str, Any]
     ) -> Response:
         return self.client.put(
-            f"/api/admin/knowledge/people/relationship-types/{self._entity_id(relationship_type_id)}",
+            f"/api/knowledge/people/relationship-types/{self._entity_id(relationship_type_id)}",
             json=data,
         )
 
-    def delete_admin_person_relationship_type(self, *, relationship_type_id: int | str) -> Response:
+    def delete_person_relationship_type(self, *, relationship_type_id: int | str) -> Response:
         return self.client.delete(
-            f"/api/admin/knowledge/people/relationship-types/{self._entity_id(relationship_type_id)}"
+            f"/api/knowledge/people/relationship-types/{self._entity_id(relationship_type_id)}"
         )
 
-    def get_admin_tools_cache(self) -> Response:
-        return self.client.get("/api/admin/tools/cache")
+    def get_tools_cache(self) -> Response:
+        return self.client.get("/api/tools/cache")
 
-    def post_admin_tools_cache_clear(self) -> Response:
-        return self.client.post("/api/admin/tools/cache/clear")
+    def post_tools_cache_clear(self) -> Response:
+        return self.client.post("/api/tools/cache/clear")
 
-    def post_admin_tools_cache_warm(self) -> Response:
-        return self.client.post("/api/admin/tools/cache/warm")
+    def post_tools_cache_warm(self) -> Response:
+        return self.client.post("/api/tools/cache/warm")
 
-    def get_admin_tools_cache_warm_operation(self, *, operation_id: str) -> Response:
-        return self.client.get(f"/api/admin/tools/cache/warm/{operation_id}")
+    def get_tools_cache_warm_operation(self, *, operation_id: str) -> Response:
+        return self.client.get(f"/api/tools/cache/warm/{operation_id}")
 
     def get_wiki_link_targets(self, language: str | None = "ru") -> Response:
         params: dict[str, str] = {}
         if language is not None:
             params["language"] = language
-        return self.client.get("/api/admin/wiki-links/targets", params=params)
+        return self.client.get("/api/wiki-links/targets", params=params)
 
-    def get_admin_resumes(self, page: int | None = 1, page_size: int | None = 20) -> Response:
+    def get_resumes(self, page: int | None = 1, page_size: int | None = 20) -> Response:
         params: dict[str, int] = {
             key: value
             for key, value in (("page", page), ("pageSize", page_size))
             if value is not None
         }
-        return self.client.get("/api/admin/resumes", params=params)
+        return self.client.get("/api/resumes", params=params)
 
     def post_create_resume(self, data: dict[str, Any]) -> Response:
-        return self.client.post("/api/admin/resumes", json=data)
+        return self.client.post("/api/resumes", json=data)
 
-    def get_admin_resume(self, resume_id: int | str) -> Response:
-        return self.client.get(f"/api/admin/resumes/{self._entity_id(resume_id)}")
+    def get_resume(self, resume_id: int | str) -> Response:
+        return self.client.get(f"/api/resumes/{self._entity_id(resume_id)}")
 
     def put_update_resume(self, resume_id: int | str, data: dict[str, Any]) -> Response:
-        return self.client.put(f"/api/admin/resumes/{self._entity_id(resume_id)}", json=data)
+        return self.client.put(f"/api/resumes/{self._entity_id(resume_id)}", json=data)
 
     def post_export_resume(self, resume_id: int | str, data: dict[str, Any]) -> Response:
-        return self.client.post(
-            f"/api/admin/resumes/{self._entity_id(resume_id)}/export", json=data
-        )
+        return self.client.post(f"/api/resumes/{self._entity_id(resume_id)}/export", json=data)
 
     def delete_resume(self, resume_id: int | str) -> Response:
-        return self.client.delete(f"/api/admin/resumes/{self._entity_id(resume_id)}")
+        return self.client.delete(f"/api/resumes/{self._entity_id(resume_id)}")
 
-    def post_admin_file(
+    def post_file(
         self, *, purpose: str, name: str, filename: str, content: bytes, content_type: str
     ) -> Response:
         return self.client.post(
-            "/api/admin/files",
+            "/api/files",
             data={"purpose": purpose, "name": name},
             files={"file": (filename, content, content_type)},
         )
 
-    def get_admin_files(self, *, purpose: str) -> Response:
-        return self.client.get("/api/admin/files", params={"purpose": purpose})
+    def get_files(self, *, purpose: str) -> Response:
+        return self.client.get("/api/files", params={"purpose": purpose})
 
-    def get_admin_file(self, *, file_id: str) -> Response:
-        return self.client.get(f"/api/admin/files/{file_id}")
+    def get_file(self, *, file_id: str) -> Response:
+        return self.client.get(f"/api/files/{file_id}")
 
-    def put_admin_file(self, *, file_id: str, name: str) -> Response:
-        return self.client.put(f"/api/admin/files/{file_id}", json={"name": name})
+    def put_file(self, *, file_id: str, name: str) -> Response:
+        return self.client.put(f"/api/files/{file_id}", json={"name": name})
 
-    def delete_admin_file(self, *, file_id: str) -> Response:
-        return self.client.delete(f"/api/admin/files/{file_id}")
+    def delete_file(self, *, file_id: str) -> Response:
+        return self.client.delete(f"/api/files/{file_id}")

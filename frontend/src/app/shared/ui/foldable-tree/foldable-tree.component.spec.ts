@@ -19,14 +19,16 @@ describe('FoldableTreeComponent', () => {
 
   function openSection(): void {
     (
-      fixture.nativeElement.querySelector('[data-testid="admin-tree-section"]') as HTMLButtonElement
+      fixture.nativeElement.querySelector(
+        '[data-testid="workspace-tree-section"]',
+      ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();
   }
 
   function itemButton(index: number): HTMLButtonElement {
     return fixture.nativeElement.querySelectorAll(
-      '.foldable-tree-items [data-testid="admin-tree-item"]',
+      '.foldable-tree-items [data-testid="workspace-tree-item"]',
     )[index] as HTMLButtonElement;
   }
 
@@ -53,14 +55,14 @@ describe('FoldableTreeComponent', () => {
     fixture.componentRef.setInput('emptyMessage', 'Разделы появятся позже.');
     fixture.componentRef.setInput('selectedItemKey', 'typos');
     fixture.componentRef.setInput('defaultExpandedSectionKeys', []);
-    fixture.componentRef.setInput('sectionTestId', 'admin-tree-section');
-    fixture.componentRef.setInput('itemTestId', 'admin-tree-item');
+    fixture.componentRef.setInput('sectionTestId', 'workspace-tree-section');
+    fixture.componentRef.setInput('itemTestId', 'workspace-tree-item');
     fixture.detectChanges();
   });
 
   it('renders foldable sections and selected nested items as an accessible tree', () => {
     const section = fixture.nativeElement.querySelector(
-      '[data-testid="admin-tree-section"]',
+      '[data-testid="workspace-tree-section"]',
     ) as HTMLButtonElement;
 
     expect(fixture.nativeElement.querySelector('[role="tree"]')).not.toBeNull();
@@ -73,7 +75,7 @@ describe('FoldableTreeComponent', () => {
 
     const items = Array.from(
       fixture.nativeElement.querySelectorAll(
-        '.foldable-tree-items [data-testid="admin-tree-item"]',
+        '.foldable-tree-items [data-testid="workspace-tree-item"]',
       ),
     ) as HTMLButtonElement[];
     expect(section.getAttribute('aria-expanded')).toBe('true');
@@ -91,7 +93,7 @@ describe('FoldableTreeComponent', () => {
     fixture.detectChanges();
 
     const rootItem = fixture.nativeElement.querySelector(
-      '[data-testid="admin-tree-item"]',
+      '[data-testid="workspace-tree-item"]',
     ) as HTMLButtonElement;
 
     expect(rootItem.textContent?.trim()).toBe('Дашборд');
@@ -106,10 +108,10 @@ describe('FoldableTreeComponent', () => {
     fixture.detectChanges();
 
     const section = fixture.nativeElement.querySelector(
-      '[data-testid="admin-tree-section"]',
+      '[data-testid="workspace-tree-section"]',
     ) as HTMLButtonElement;
     const items = fixture.nativeElement.querySelectorAll(
-      '.foldable-tree-items [data-testid="admin-tree-item"]',
+      '.foldable-tree-items [data-testid="workspace-tree-item"]',
     );
 
     expect(section.getAttribute('aria-expanded')).toBe('true');
@@ -158,7 +160,7 @@ describe('FoldableTreeComponent', () => {
     openSection();
     (
       fixture.nativeElement.querySelector(
-        '.foldable-tree-items [data-testid="admin-tree-item"]',
+        '.foldable-tree-items [data-testid="workspace-tree-item"]',
       ) as HTMLButtonElement
     ).click();
 
@@ -170,7 +172,9 @@ describe('FoldableTreeComponent', () => {
     fixture.componentInstance.itemSelected.subscribe((key) => selected.push(key));
 
     (
-      fixture.nativeElement.querySelector('[data-testid="admin-tree-item"]') as HTMLButtonElement
+      fixture.nativeElement.querySelector(
+        '[data-testid="workspace-tree-item"]',
+      ) as HTMLButtonElement
     ).click();
 
     expect(selected).toEqual(['dashboard']);

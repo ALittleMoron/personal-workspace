@@ -33,7 +33,7 @@ describe('NotFoundPageComponent', () => {
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement | null;
 
     expect(link).not.toBeNull();
-    expect(link?.getAttribute('href')).toBe('/admin-panel/dashboard');
+    expect(link?.getAttribute('href')).toBe('/');
     expect(link?.textContent?.trim()).toBe('В рабочую область');
   });
 

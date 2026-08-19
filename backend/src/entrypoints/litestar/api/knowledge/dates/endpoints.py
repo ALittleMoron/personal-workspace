@@ -25,9 +25,9 @@ from infra.config.constants import constants
 from infra.post_commit_actions import PostCommitActions
 
 
-class AdminKnowledgeDatesApiController(Controller):
+class KnowledgeDatesApiController(Controller):
     path = "/knowledge/dates"
-    tags = ["admin knowledge dates"]
+    tags = ["knowledge dates"]
     include_in_schema = False
     response_headers = {
         constants.knowledge_files.cache_control_header_name: (
@@ -38,7 +38,7 @@ class AdminKnowledgeDatesApiController(Controller):
     @get(
         "",
         description="List private memorable dates owned by the current author.",
-        name="admin-knowledge-dates-list-api-handler",
+        name="knowledge-dates-list-api-handler",
         status_code=status_codes.HTTP_200_OK,
         dependencies={
             "filters": Provide(provide_knowledge_date_filters, sync_to_thread=False),
@@ -56,7 +56,7 @@ class AdminKnowledgeDatesApiController(Controller):
     @post(
         "",
         description="Quick-create a private memorable date.",
-        name="admin-knowledge-dates-create-api-handler",
+        name="knowledge-dates-create-api-handler",
         status_code=status_codes.HTTP_201_CREATED,
     )
     async def create_date(
@@ -88,7 +88,7 @@ class AdminKnowledgeDatesApiController(Controller):
     @get(
         "/{date_id:str}",
         description="Get one private memorable date owned by the current author.",
-        name="admin-knowledge-dates-detail-api-handler",
+        name="knowledge-dates-detail-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def get_date(
@@ -107,7 +107,7 @@ class AdminKnowledgeDatesApiController(Controller):
     @put(
         "/{date_id:str}",
         description="Replace editable private memorable date data.",
-        name="admin-knowledge-dates-update-api-handler",
+        name="knowledge-dates-update-api-handler",
         status_code=status_codes.HTTP_200_OK,
     )
     async def update_date(
@@ -145,7 +145,7 @@ class AdminKnowledgeDatesApiController(Controller):
     @delete(
         "/{date_id:str}",
         description="Permanently delete a private memorable date.",
-        name="admin-knowledge-dates-delete-api-handler",
+        name="knowledge-dates-delete-api-handler",
         status_code=status_codes.HTTP_204_NO_CONTENT,
     )
     async def delete_date(  # noqa: PLR0913

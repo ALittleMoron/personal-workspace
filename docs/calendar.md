@@ -13,10 +13,10 @@ People load birthdays, and Knowledge Items project display names. The clean `000
 the indexes used by these reads; the query-plan gate exercises retained Knowledge and Resume storage
 scenarios.
 
-## Admin API
+## Protected API
 
 ```text
-GET /api/admin/calendar
+GET /api/calendar
     ?referenceDate=YYYY-MM-DD
     &window=month|currentAndNextMonths
 ```
@@ -30,14 +30,14 @@ Entries sort by month, day, memorable date before birthday, case-insensitive nam
 to January advances the occurrence year. February 29 remains a February annual date and is reported
 below the month grid when the selected year has no such day.
 
-The handler is under the authenticated `/api/admin` boundary, excluded from OpenAPI and returned
-with `Cache-Control: no-store`. The configured owner's session supplies the author username used by
-the retained author-scoped reads in the protected CSR workspace.
+The handler is protected by the authenticated API boundary, excluded from OpenAPI and returned with
+`Cache-Control: no-store`. The configured owner's session supplies the author username used by the
+retained author-scoped reads in the private workspace.
 
-## Dashboard composition
+## Workspace dashboard composition
 
-`/admin-panel` redirects to `/admin-panel/dashboard`, which is the first root item in the shared
-sidebar. Its neutral tabs are Home, Calendar and Tools:
+`/` directly hosts the workspace dashboard, which is the first root item in the shared sidebar. Its
+neutral tabs are Home, Calendar and Tools:
 
 - Home contains the independent foldable widget for upcoming dates and birthdays in the browser's
   local current and next months.

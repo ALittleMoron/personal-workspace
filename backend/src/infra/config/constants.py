@@ -27,7 +27,7 @@ class ValkeyDatabaseConstants:
 
 
 class ValkeyNamespaceConstants:
-    admin_cache_warm_operations: str = "ADMIN_CACHE_WARM_OPERATIONS"
+    cache_warm_operations: str = "CACHE_WARM_OPERATIONS"
     framework: str = "LITESTAR"
 
 
@@ -109,10 +109,8 @@ class KnowledgeFilesConstants:
 
 
 class RequestLoggingConstants:
-    private_knowledge_path_prefix: Literal["/api/admin/knowledge"] = "/api/admin/knowledge"
-    private_knowledge_safe_path: Literal["/api/admin/knowledge/{private}"] = (
-        "/api/admin/knowledge/{private}"
-    )
+    private_knowledge_path_prefix: Literal["/api/knowledge"] = "/api/knowledge"
+    private_knowledge_safe_path: Literal["/api/knowledge/{private}"] = "/api/knowledge/{private}"
 
 
 class ResumeExportConstants:
@@ -162,7 +160,7 @@ class SearchConstants:
     min_trigram_fuzzy_query_length: int = 6
 
 
-class AdminValidationConstants:
+class ApiValidationConstants:
     short_text_max_length: int = 255
     url_max_length: int = 2_048
     email_max_length: int = 254
@@ -186,7 +184,7 @@ class Constants:
     request_logging: RequestLoggingConstants = RequestLoggingConstants()
     resume_export: ResumeExportConstants = ResumeExportConstants()
     search: SearchConstants = SearchConstants()
-    admin_validation: AdminValidationConstants = AdminValidationConstants()
+    api_validation: ApiValidationConstants = ApiValidationConstants()
     auth: AuthConstants = AuthConstants()
 
 
