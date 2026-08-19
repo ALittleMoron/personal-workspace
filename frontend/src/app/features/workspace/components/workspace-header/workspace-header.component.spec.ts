@@ -92,6 +92,15 @@ describe('WorkspaceHeaderComponent', () => {
     );
   });
 
+  it('shows the workspace logo beside the title without repeating its accessible name', () => {
+    const logo = (fixture.nativeElement as HTMLElement).querySelector<HTMLImageElement>(
+      '[data-testid="workspace-logo"]',
+    );
+
+    expect(logo?.getAttribute('src')).toBe('/brand/archive-portal-64.png');
+    expect(logo?.getAttribute('alt')).toBe('');
+  });
+
   it('reflects theme changes in the header control label', () => {
     const themeButton = buttonWithText('Dark');
 

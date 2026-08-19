@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../frontend/public/brand/archive-portal.png" alt="Логотип Personal Workspace" width="160" />
+</p>
+
 # Personal Workspace
 
 [🇺🇸 English version](./README.md)

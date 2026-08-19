@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../frontend/public/brand/archive-portal.png" alt="Personal Workspace logo" width="160" />
+</p>
+
 # Personal Workspace
 
 [🇷🇺 Russian version](./README_RU.md)
