@@ -1,5 +1,3 @@
-import { PlatformLocation } from '@angular/common';
-import { MOCK_PLATFORM_LOCATION_CONFIG, MockPlatformLocation } from '@angular/common/testing';
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
@@ -8,7 +6,6 @@ import { AppComponent } from './app.component';
 import { I18nService } from './core/i18n/i18n.service';
 import { AuthOverlayService } from './core/auth/auth-overlay.service';
 import { AuthSessionService } from './core/auth/auth-session.service';
-import { ThemeName, ThemeService } from './core/layout/theme.service';
 import { createI18nTestingValue } from './testing/i18n-testing';
 
 @Component({ standalone: true, template: '<button id="workspace-control">Workspace</button>' })
@@ -58,10 +55,6 @@ describe('AppComponent', () => {
             retryStartup,
           },
         },
-        {
-          provide: ThemeService,
-          useValue: { theme: signal<ThemeName>('light'), toggleTheme: jest.fn() },
-        },
         { provide: AuthOverlayService, useValue: { loginRequired, close: closeOverlay } },
         { provide: AuthSessionService, useValue: { login } },
       ],
@@ -73,34 +66,15 @@ describe('AppComponent', () => {
 
   afterEach(() => jest.useRealTimers());
 
-  it('renders the public shell around public routes', () => {
+  it('renders the shared private application background without public chrome', () => {
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('app-site-header')).not.toBeNull();
-    expect(element.querySelector('app-site-footer')).not.toBeNull();
-  });
-
-  it('removes public chrome while an admin route is active', async () => {
-    const router = TestBed.inject(Router);
-
-    await router.navigateByUrl('/admin-panel');
-    fixture.detectChanges();
-
-    const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('app-site-header')).toBeNull();
-    expect(element.querySelector('app-site-footer')).toBeNull();
-  });
-
-  it('removes the complete public chrome while the login route is active', async () => {
-    const router = TestBed.inject(Router);
-
-    await router.navigateByUrl('/login');
-    fixture.detectChanges();
-
-    const element = fixture.nativeElement as HTMLElement;
     expect(element.querySelector('app-site-header')).toBeNull();
     expect(element.querySelector('app-site-footer')).toBeNull();
     expect(element.querySelector('app-cookie-consent-banner')).toBeNull();
+    expect(element.querySelector('[data-testid="app-background"]')).not.toBeNull();
+    expect(element.querySelector('app-notification-area')).not.toBeNull();
+    expect(element.querySelector('router-outlet')).not.toBeNull();
   });
 
   it('keeps the routed workspace mounted and inaccessible behind the login-required dialog', async () => {
@@ -195,44 +169,4 @@ describe('AppComponent', () => {
 
     expect(retryStartup).toHaveBeenCalledTimes(1);
   });
-});
-
-describe('AppComponent direct shellless bootstrap', () => {
-  it.each(['/login', '/admin-panel/knowledge/people'])(
-    'does not render public chrome before initial navigation at %s',
-    async (initialUrl) => {
-      await TestBed.configureTestingModule({
-        imports: [AppComponent],
-        providers: [
-          provideRouter([]),
-          { provide: PlatformLocation, useClass: MockPlatformLocation },
-          {
-            provide: MOCK_PLATFORM_LOCATION_CONFIG,
-            useValue: { startUrl: initialUrl },
-          },
-          { provide: I18nService, useValue: createI18nTestingValue() },
-          {
-            provide: ThemeService,
-            useValue: { theme: signal<ThemeName>('light'), toggleTheme: jest.fn() },
-          },
-          {
-            provide: AuthOverlayService,
-            useValue: { loginRequired: signal(false), close: jest.fn() },
-          },
-          {
-            provide: AuthSessionService,
-            useValue: { login: jest.fn(() => of({ username: 'owner' })) },
-          },
-        ],
-      }).compileComponents();
-
-      const directFixture = TestBed.createComponent(AppComponent);
-      directFixture.detectChanges();
-      const element = directFixture.nativeElement as HTMLElement;
-
-      expect(element.querySelector('app-site-header')).toBeNull();
-      expect(element.querySelector('app-site-footer')).toBeNull();
-      expect(element.querySelector('app-cookie-consent-banner')).toBeNull();
-    },
-  );
 });

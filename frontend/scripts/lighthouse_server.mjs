@@ -10,6 +10,8 @@ const lighthousePort = 4210;
 const shellPort = 4211;
 const shellHealthUrl = `http://127.0.0.1:${shellPort}/healthz`;
 const lighthouseNonce = 'lighthouse-csp-nonce';
+const lighthouseAuthenticatedHeader = 'x-lighthouse-authenticated';
+const lighthouseAuthenticatedValue = 'owner';
 
 let shell;
 let proxy;
@@ -22,6 +24,7 @@ try {
   proxy = createProxy();
   await listen(proxy, lighthousePort);
   await verifyI18nEndpoints();
+  await verifyDashboardFixtures();
   await verifyCompiledShellDocument();
   console.log(`Lighthouse server ready on http://127.0.0.1:${lighthousePort}`);
 } catch (error) {
@@ -34,7 +37,7 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 function startShell() {
-  const child = spawn(process.execPath, ['dist/personal-workspace-frontend/server/server.js'], {
+  const child = spawn(process.execPath, ['dist/personal-workspace-frontend/runtime/static-runtime.js'], {
     cwd: frontendDir,
     env: { ...process.env, PORT: String(shellPort) },
     stdio: 'inherit',
@@ -71,12 +74,81 @@ function createProxy() {
       return sendJson(outgoing, 200, { language, messages: lighthouseI18nBundles[language] });
     }
 
+    if (incoming.method === 'GET' && url.pathname === '/api/auth/session') {
+      if (!hasFixtureAuthentication(incoming)) {
+        return sendJson(outgoing, 401, { detail: 'Anonymous Lighthouse fixture session.' });
+      }
+      return sendJson(outgoing, 200, { username: lighthouseAuthenticatedValue });
+    }
+
+    if (incoming.method === 'GET' && url.pathname === '/api/admin/calendar') {
+      if (!hasFixtureAuthentication(incoming)) {
+        return sendJson(outgoing, 401, { detail: 'Anonymous Lighthouse fixture dashboard request.' });
+      }
+      const calendar = calendarFixture(url);
+      if (calendar === null) {
+        return sendJson(outgoing, 400, { detail: 'Calendar fixture requires referenceDate and window.' });
+      }
+      return sendJson(outgoing, 200, calendar);
+    }
+
+    if (incoming.method === 'GET' && url.pathname === '/api/admin/tools/cache') {
+      if (!hasFixtureAuthentication(incoming)) {
+        return sendJson(outgoing, 401, { detail: 'Anonymous Lighthouse fixture dashboard request.' });
+      }
+      return sendJson(outgoing, 200, cacheStatusFixture());
+    }
+
     if (url.pathname.startsWith('/api/')) {
       return sendJson(outgoing, 404, { detail: 'Unsupported Lighthouse fixture API route.' });
     }
 
     return forwardToShell(incoming, outgoing);
   });
+}
+
+function hasFixtureAuthentication(incoming) {
+  return incoming.headers[lighthouseAuthenticatedHeader] === lighthouseAuthenticatedValue;
+}
+
+function calendarFixture(url) {
+  const referenceDate = url.searchParams.get('referenceDate');
+  const window = url.searchParams.get('window');
+  if (
+    referenceDate === null ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(referenceDate) ||
+    (window !== 'month' && window !== 'currentAndNextMonths')
+  ) {
+    return null;
+  }
+  return {
+    referenceDate,
+    window,
+    summary: { memorableDateCount: 0, birthdayCount: 0 },
+    entries: [],
+  };
+}
+
+function cacheStatusFixture() {
+  return {
+    enabled: true,
+    configuredTtlSeconds: 86400,
+    scheduledWarmIntervalSeconds: 3600,
+    domains: [
+      {
+        domain: 'i18n',
+        keyCount: 2,
+        minimumRemainingTtlSeconds: 3600,
+        nonExpiringKeyCount: 0,
+      },
+    ],
+    lastManualWarmOperation: {
+      operationId: 'lighthouse-cache-warm',
+      status: 'succeeded',
+      queuedAt: '2026-08-19T00:00:00Z',
+      summary: { attempted: 2, written: 2, skipped: 0 },
+    },
+  };
 }
 
 function forwardToShell(incoming, outgoing) {
@@ -140,9 +212,81 @@ async function verifyI18nEndpoints() {
   }
 }
 
+async function verifyDashboardFixtures() {
+  const authenticatedHeaders = { [lighthouseAuthenticatedHeader]: lighthouseAuthenticatedValue };
+  const anonymousSession = await fetch(`http://127.0.0.1:${lighthousePort}/api/auth/session`);
+  if (anonymousSession.status !== 401) {
+    throw new Error('Lighthouse anonymous session fixture did not return 401');
+  }
+
+  const authenticatedSession = await fetch(`http://127.0.0.1:${lighthousePort}/api/auth/session`, {
+    headers: authenticatedHeaders,
+  });
+  const authenticatedUser = await authenticatedSession.json();
+  if (!authenticatedSession.ok || authenticatedUser.username !== lighthouseAuthenticatedValue) {
+    throw new Error('Lighthouse authenticated session fixture returned an invalid contract');
+  }
+
+  const anonymousCalendar = await fetch(
+    `http://127.0.0.1:${lighthousePort}/api/admin/calendar?referenceDate=2026-08-19&window=month`,
+  );
+  if (anonymousCalendar.status !== 401) {
+    throw new Error('Lighthouse anonymous calendar fixture did not return 401');
+  }
+
+  for (const window of ['month', 'currentAndNextMonths']) {
+    const calendarResponse = await fetch(
+      `http://127.0.0.1:${lighthousePort}/api/admin/calendar?referenceDate=2026-08-19&window=${window}`,
+      { headers: authenticatedHeaders },
+    );
+    const calendar = await calendarResponse.json();
+    if (
+      !calendarResponse.ok ||
+      calendar.referenceDate !== '2026-08-19' ||
+      calendar.window !== window ||
+      calendar.summary?.memorableDateCount !== 0 ||
+      calendar.summary?.birthdayCount !== 0 ||
+      !Array.isArray(calendar.entries) ||
+      calendar.entries.length !== 0
+    ) {
+      throw new Error('Lighthouse calendar fixture returned an invalid contract');
+    }
+  }
+
+  const anonymousCache = await fetch(`http://127.0.0.1:${lighthousePort}/api/admin/tools/cache`);
+  if (anonymousCache.status !== 401) {
+    throw new Error('Lighthouse anonymous cache fixture did not return 401');
+  }
+
+  const cacheResponse = await fetch(`http://127.0.0.1:${lighthousePort}/api/admin/tools/cache`, {
+    headers: authenticatedHeaders,
+  });
+  const cache = await cacheResponse.json();
+  if (
+    !cacheResponse.ok ||
+    cache.enabled !== true ||
+    cache.configuredTtlSeconds !== 86400 ||
+    cache.scheduledWarmIntervalSeconds !== 3600 ||
+    !Array.isArray(cache.domains) ||
+    cache.domains.length !== 1 ||
+    cache.domains[0]?.domain !== 'i18n' ||
+    cache.domains[0]?.keyCount !== 2 ||
+    cache.domains[0]?.minimumRemainingTtlSeconds !== 3600 ||
+    cache.domains[0]?.nonExpiringKeyCount !== 0 ||
+    cache.lastManualWarmOperation?.operationId !== 'lighthouse-cache-warm' ||
+    cache.lastManualWarmOperation?.status !== 'succeeded' ||
+    cache.lastManualWarmOperation?.queuedAt !== '2026-08-19T00:00:00Z' ||
+    cache.lastManualWarmOperation?.summary?.attempted !== 2 ||
+    cache.lastManualWarmOperation?.summary?.written !== 2 ||
+    cache.lastManualWarmOperation?.summary?.skipped !== 0
+  ) {
+    throw new Error('Lighthouse cache fixture returned an invalid contract');
+  }
+}
+
 async function verifyCompiledShellDocument() {
   const response = await fetch(
-    `http://127.0.0.1:${lighthousePort}/ru/how-this-site-is-built`,
+    `http://127.0.0.1:${lighthousePort}/login`,
     {
       headers: {
         accept: 'text/html',

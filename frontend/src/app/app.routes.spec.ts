@@ -7,18 +7,14 @@ import { NEVER, of } from 'rxjs';
 import { routes } from './app.routes';
 import { AuthState } from './core/auth/auth.model';
 import { AuthSessionService } from './core/auth/auth-session.service';
-import { LanguageCode } from './core/i18n/i18n.model';
 import { I18nService } from './core/i18n/i18n.service';
 import { LocalizedTitleStrategy } from './core/routing/localized-title.strategy';
 import { NotFoundPageComponent } from './features/not-found/pages/not-found-page/not-found-page.component';
-import { SiteCaseStudyPageComponent } from './features/site-case-study/pages/site-case-study-page/site-case-study-page.component';
-import { UpdatesPageComponent } from './features/updates/pages/updates-page/updates-page.component';
 import { createI18nTestingValue } from './testing/i18n-testing';
 import { CalendarService } from './features/admin-panel/services/calendar.service';
 import { AdminToolsService } from './features/admin-panel/services/admin-tools.service';
 
 describe('application routes', () => {
-  let language: WritableSignal<LanguageCode | null>;
   let router: Router;
   let title: Title;
   let originalTitle: string;
@@ -28,7 +24,6 @@ describe('application routes', () => {
     originalTitle = document.title;
     const i18n = createI18nTestingValue();
     authState = signal<AuthState>({ status: 'anonymous', user: null });
-    language = i18n.language as WritableSignal<LanguageCode | null>;
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
@@ -51,7 +46,15 @@ describe('application routes', () => {
 
   afterEach(() => title.setTitle(originalTitle));
 
-  it('sends an anonymous browser root to the lazy login contour', async () => {
+  it('allows an anonymous visitor to open login', async () => {
+    await RouterTestingHarness.create();
+
+    await router.navigateByUrl('/login');
+
+    expect(router.url).toBe('/login');
+  });
+
+  it('sends an anonymous browser root to login', async () => {
     await RouterTestingHarness.create();
 
     await router.navigateByUrl('/');
@@ -85,43 +88,23 @@ describe('application routes', () => {
     expect(router.url).toBe('/admin-panel/dashboard');
   });
 
-  it('navigates between localized public destinations with browser titles', async () => {
+  it.each(['/ru/updates', '/updates', '/how-this-site-is-built', '/missing-page'])(
+    'sends an anonymous legacy public route %s to login without a return URL',
+    async (url) => {
+      await RouterTestingHarness.create();
+
+      await router.navigateByUrl(url);
+
+      expect(router.url).toBe('/login');
+    },
+  );
+
+  it('keeps an authenticated unknown URL while showing not found', async () => {
+    authState.set({ status: 'authenticated', user: { username: 'owner' } });
     const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/ru/updates', UpdatesPageComponent);
-    expect(router.url).toBe('/ru/updates');
-    expect(title.getTitle()).toBe('Обновления');
-
-    language.set('en');
-    await harness.navigateByUrl('/en/how-this-site-is-built', SiteCaseStudyPageComponent);
-    expect(router.url).toBe('/en/how-this-site-is-built');
-    expect(title.getTitle()).toBe('How this site is built');
-  });
-
-  it('keeps the legacy public route and redirects an unknown browser path to not found', async () => {
-    const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/updates', UpdatesPageComponent);
-    expect(router.url).toBe('/updates');
 
     await harness.navigateByUrl('/missing-page', NotFoundPageComponent);
-    expect(router.url).toBe('/404');
+    expect(router.url).toBe('/missing-page');
     expect(harness.routeNativeElement?.querySelector('h1')).not.toBeNull();
-  });
-
-  it('keeps the direct site case-study route public', async () => {
-    const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/how-this-site-is-built', SiteCaseStudyPageComponent);
-
-    expect(router.url).toBe('/how-this-site-is-built');
-  });
-
-  it('keeps the explicit not-found route reachable', async () => {
-    const harness = await RouterTestingHarness.create();
-
-    await harness.navigateByUrl('/404', NotFoundPageComponent);
-
-    expect(router.url).toBe('/404');
   });
 });

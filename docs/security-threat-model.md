@@ -1,17 +1,17 @@
 # Security threat model
 
-This public-safe model records the current security boundaries for the portfolio, private Knowledge
-workspace and operations stack. It intentionally omits secrets, private host details and exploit
-playbooks. Reassess it after an auth implementation, routing/deploy change, data-model change,
-security finding or restore exercise.
+This public-safe model records the current security boundaries for the private personal workspace
+and operations stack. It intentionally omits secrets, private host details and exploit playbooks.
+Reassess it after an auth implementation, routing/deploy change, data-model change, security finding
+or restore exercise.
 
 ## Scope and assets
 
-Assets include public source and pages, private Knowledge records and attachments, resumes,
+Assets include the private workspace UI, private Knowledge records and attachments, resumes,
 PostgreSQL/MinIO/Valkey data, deployment credentials, Compose secrets, TLS and WireGuard keys, and
-backup material. The current workspace has one environment-configured authenticated owner, not
-account or team management. That owner supplies the `author_username` passed into retained
-per-author access predicates.
+backup material. `/login` is the only anonymous UI route. The current workspace has one
+environment-configured authenticated owner, not account or team management. That owner supplies the
+`author_username` passed into retained per-author access predicates.
 
 Out of scope are endpoint compromise of a visitor device, a full enterprise risk register, and
 complete incident-response or disaster-recovery procedures.

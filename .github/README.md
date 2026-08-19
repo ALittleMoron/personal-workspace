@@ -13,10 +13,9 @@
 | DevOps | ![docker](./badges/docker.svg) ![nginx](./badges/nginx.svg) ![minio](./badges/minio.svg) ![docker-compose](./badges/docker-compose.svg) |
 | Quality | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
 
-Portfolio site with a localized public case study and updates, plus a private administrator
-workspace for resumes and the Knowledge database. The environment-configured authenticated owner
-uses an encrypted session to access `/api/admin/*`; domain access remains author-scoped for a future
-multi-user model.
+Private personal workspace for resumes and the Knowledge database. `/login` is the only anonymous
+UI route; the environment-configured authenticated owner uses an encrypted session to access
+`/api/admin/*`, and domain access remains author-scoped for a future multi-user model.
 
 ## Documentation
 
@@ -89,4 +88,4 @@ make performance-lighthouse
 ```
 
 The query-plan gate exercises current Knowledge and Resume storage queries. Lighthouse evaluates
-the CSR routes for performance, accessibility and best practices.
+the CSR login and authenticated workspace routes for performance, accessibility and best practices.

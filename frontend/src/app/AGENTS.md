@@ -31,7 +31,7 @@ Never violate these boundaries:
 ## `core/` Responsibilities
 
 - Keep only app-wide infrastructure and cross-cutting capabilities in `core/`, such as HTTP, i18n,
-  rendering, routing, layout, privacy, notifications, uploads, and SEO.
+  rendering, routing, layout, notifications, uploads, and browser lifecycle helpers.
 - Do not move feature workflows, feature DTOs, or feature-owned state into `core/` merely to share
   them. Extract only a stable cross-cutting contract with multiple real consumers.
 - Keep canonical contracts in their source modules instead of duplicating file inventories or type
@@ -41,21 +41,10 @@ Never violate these boundaries:
 
 - Runtime i18n is loaded once on app startup from the backend: request available languages first,
   then request the selected language bundle.
-- Public prefixed routes (`/ru/...` and `/en/...`) must initialize UI/content language from the URL.
-  Keep legacy unprefixed routes only for compatibility/protected SPA access, not canonical SEO.
+- Initialize UI language through the backend-supported runtime language state. Do not add
+  language-prefixed public routes, URL-driven language fallbacks, or SEO route behavior.
 - Do not hardcode user-facing interface strings in Angular templates or components. Use
   `TranslatePipe` in templates and `I18nService.translate()` in TypeScript code.
-- The public updates page is static authored content, not UI catalog content. Keep accumulating
-  changelog entries in `features/updates/updates.timeline.ts` as typed objects with `id`, `month`,
-  `order`, localized RU/EN `title` and `summary`, and finite `tagIds`. Do not add
-  `updates.month.*` or `updates.entry.*` keys to backend i18n; backend i18n for updates stays
-  limited to page chrome, SEO text, footer label, and finite tag labels. Do not add tests that pin
-  exact milestone copy, dates, ordering, or tag assignments; tests may cover grouping/localization
-  behavior and the structural content shape.
-- For sufficiently large user-visible, architectural, security, operations, or delivery changes,
-  ask whether they should be added to the public updates page. Skip routine refactors, small fixes,
-  incidental cleanup, dependency churn, and implementation-only details; group related work under a
-  larger milestone when that is more natural.
 - Persist only supported language codes returned by the backend. Do not introduce frontend-only
   languages or language fallbacks that bypass the backend enum/catalog.
 - Resume workspace content is single-language per resume. Forms must send required `language` plus
@@ -104,38 +93,28 @@ match a template.
 
 - Keep `app.routes.ts` limited to top-level route contours. It may lazy-load feature route arrays
   with `loadChildren` so adding a feature sub-route does not change the root route table.
-- `/` redirects to the localized site-build case study using the initialized backend-driven UI
-  language; keep shared public-home URL construction in `core/routing/`.
-- Public canonical routes are language-prefixed. Keep SEO-facing public detail/content routes in the
-  server-route configuration when they require SSR, and render internal wiki links with the active
-  language prefix.
-- Admin CSR routes such as `/admin-panel` stay unprefixed and use runtime i18n state.
+- `/login` is the only anonymous UI route. Private routes redirect unauthenticated users there and
+  authenticated navigation stays within the workspace.
+- Do not add language-prefixed public routes, public content/updates routes, SEO metadata flows, or
+  server-render configuration. Workspace routes stay unprefixed and use runtime i18n state.
 - Feature route files own their sub-routes and lazy-load routed standalone pages with
   `loadComponent`. Nested route arrays may use `loadChildren` when they introduce a real sub-feature
   boundary.
 
 ## `app.config.ts`
 
-Keep browser/app-wide providers, interceptors, initializers, hydration, title strategy, and global
-error handling in `app.config.ts`; keep server-only providers in `app.config.server.ts`.
-
-- Keep hydration transfer cache limited to safe public GETs only. Do not transfer
-  analytics, uploads, file-management, or other private/side-effect endpoints.
+Keep browser/app-wide providers, interceptors, initializers, title strategy, and global error
+handling in `app.config.ts`. Do not introduce server-render configuration, hydration, or transfer
+cache providers for the private workspace.
 
 No `AppModule`. No `NgModule` anywhere.
 
-## `app.config.server.ts` / SSR
+## Browser Lifecycle and CSP
 
-- Server-only providers belong in `app.config.server.ts`.
-- SSR API calls must rewrite relative `/api/*` URLs through the required `SSR_API_ORIGIN`
-  environment variable.
-- Public origin for canonical/transfer-cache mapping must come from explicit `SSR_PUBLIC_ORIGIN` or
-  required `APP_URL_SCHEMA` + `APP_DOMAIN`.
-- Browser-only features such as downloads, storage-backed preferences, and content authoring
-  interactions must not run during SSR.
-- Browser-only access should go through injected Angular platform/document abstractions or narrowly
-  scoped helpers. Do not read browser globals at module scope, and do not make public SSR routes
-  depend on browser APIs being present.
+- Keep browser-only access behind injected platform/document abstractions or narrowly scoped
+  helpers. Do not read browser globals at module scope.
+- Preserve the nonce-aware static shell and strict CSP: do not add inline script/style behavior,
+  runtime positioning, or untestable browser side effects that would require broader CSP.
 
 ## API Error Contract
 

@@ -97,9 +97,6 @@ files under `backend/`. Keep shared cross-project configuration and common infra
 - When an endpoint receives many query, path, header, or cookie parameters and only assembles them
   into one filter/read parameter object, prefer moving that assembly into a Litestar `Provide`
   dependency in a neighboring `dependencies.py` module so the handler receives the object directly.
-- Public discovery response assembly, such as sitemap URL collection, sitemap XML rendering, and
-  robots.txt rendering, must not live in `endpoints.py` controller modules. Keep it in a neighboring
-  `backend/src/entrypoints/litestar/**` module owned by the HTTP entrypoint layer, not in `core`.
 - API schemas must inherit from the shared schema bases and map explicitly between API, ORM, and
   core representations. Use `to_domain_schema` for conversion to the same core concept and
   `from_domain_schema` for conversion from it when the method signature identifies the exact
@@ -168,6 +165,10 @@ files under `backend/`. Keep shared cross-project configuration and common infra
   `I18N_DEFAULT_LANGUAGE` environment setting; do not add production defaults for it.
 - Keep the available-languages endpoint and bundle endpoint consistent with the enum and catalog,
   and cover new languages/keys with catalog parity tests.
+- The available-languages and bundle endpoints are deliberately anonymous; keep them aligned with
+  the configured language enum and do not attach private workspace data to their responses.
+- Health endpoints remain explicitly anonymous operational support endpoints. Keep their responses
+  minimal and do not reuse them for user or workspace state.
 - Content localisation beyond resumes remains future work until explicitly designed.
 
 ## Persistence

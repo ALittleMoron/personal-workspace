@@ -1,27 +1,15 @@
-import { DOCUMENT, PlatformLocation } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter } from 'rxjs';
+import { DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { I18nService } from './core/i18n/i18n.service';
 import { AuthOverlayService } from './core/auth/auth-overlay.service';
-import { CookieConsentBannerComponent } from './features/shell/components/cookie-consent-banner/cookie-consent-banner.component';
 import { LoginFormComponent } from './features/auth/components/login-form/login-form.component';
 import { NotificationAreaComponent } from './features/shell/components/notification-area/notification-area.component';
-import { SiteFooterComponent } from './features/shell/components/site-footer/site-footer.component';
-import { SiteHeaderComponent } from './features/shell/components/site-header/site-header.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [
-    RouterOutlet,
-    SiteHeaderComponent,
-    SiteFooterComponent,
-    NotificationAreaComponent,
-    CookieConsentBannerComponent,
-    LoginFormComponent,
-  ],
+  imports: [RouterOutlet, NotificationAreaComponent, LoginFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './app.component.scss',
   template: `
@@ -46,17 +34,8 @@ import { SiteHeaderComponent } from './features/shell/components/site-header/sit
           [attr.aria-hidden]="authOverlay.loginRequired() ? 'true' : null"
           (focusin)="rememberBackgroundFocus($event)"
         >
-          @if (!isShelllessRoute()) {
-            <app-site-header />
-          }
           <app-notification-area />
           <router-outlet />
-          @if (!isShelllessRoute()) {
-            <app-site-footer class="mt-auto" />
-          }
-          @if (!isShelllessRoute()) {
-            <app-cookie-consent-banner />
-          }
         </div>
         @if (authOverlay.loginRequired()) {
           <section
@@ -86,28 +65,10 @@ import { SiteHeaderComponent } from './features/shell/components/site-header/sit
 })
 export class AppComponent {
   private readonly document = inject(DOCUMENT);
-  private readonly platformLocation = inject(PlatformLocation);
-  private readonly router = inject(Router);
   private previousBackgroundFocus: HTMLElement | null = null;
   readonly authOverlay = inject(AuthOverlayService);
 
   readonly i18n = inject(I18nService);
-  readonly isShelllessRoute = signal(
-    isShelllessUrl(
-      `${this.platformLocation.pathname}${this.platformLocation.search}${this.platformLocation.hash}`,
-    ),
-  );
-
-  constructor() {
-    this.router.events
-      .pipe(
-        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        takeUntilDestroyed(),
-      )
-      .subscribe((event) => {
-        this.isShelllessRoute.set(isShelllessUrl(event.urlAfterRedirects));
-      });
-  }
 
   retryI18n(): void {
     this.i18n.retryStartup().subscribe();
@@ -150,14 +111,4 @@ export class AppComponent {
       (event.shiftKey ? last : first).focus();
     }
   }
-}
-
-export function isAdminPanelUrl(url: string): boolean {
-  const pathname = new URL(url, 'http://localhost').pathname;
-  return pathname === '/admin-panel' || pathname.startsWith('/admin-panel/');
-}
-
-export function isShelllessUrl(url: string): boolean {
-  const pathname = new URL(url, 'http://localhost').pathname;
-  return pathname === '/login' || isAdminPanelUrl(url);
 }

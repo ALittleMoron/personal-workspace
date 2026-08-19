@@ -13,9 +13,6 @@ unchecked entries remain active work unless a later product decision supersedes 
 - [ ] Activate the retained per-user author/access model when multi-user authentication arrives.
 - [ ] Add revocation for copied stateless session cookies and document/automate owner credential
   rotation; password-hash rotation alone must not imply existing cookie revocation.
-- [ ] Protect or remove all legacy public routes except login.
-- [ ] Remove the inherited how-this-site-is-built, updates, sitemap, robots, SEO, and SSR artifacts.
-- [ ] Remove `/admin-panel` and `/api/admin` prefixes when `/` becomes the workspace.
 
 ## Operations and resilience
 
@@ -30,7 +27,7 @@ unchecked entries remain active work unless a later product decision supersedes 
 - [ ] Review query-plan baselines after intentional schema or query changes and keep them focused on
   retained Knowledge and Resume storage paths.
 - [ ] Keep CSR Lighthouse budgets and accessibility/performance/best-practice gates meaningful as
-  public content and bundles evolve.
+  private login/workspace flows and bundles evolve.
 - [ ] Define production slow-query monitoring and an actionable response process after a concrete
   service-level target is chosen.
 
@@ -105,3 +102,5 @@ Each knowledge item has its own subfolder in "knowledge database" folder on side
 ## Refactoring
 
 - [ ] Remove all admin prefixes. There will be no separated admin panels in project.
+- [ ] Remove `/admin-panel` and `/api/admin` prefixes when `/` becomes the workspace.
+- [x] Remove the inherited how-this-site-is-built, updates, sitemap, robots, SEO, and SSR artifacts.

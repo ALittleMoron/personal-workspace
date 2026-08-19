@@ -28,8 +28,9 @@ describe('I18nService', () => {
     window.history.replaceState({}, '', '/');
   });
 
-  it('loads the URL-selected supported bundle after discovering available languages', () => {
-    window.history.replaceState({}, '', '/en/updates');
+  it('loads the stored supported bundle independently of the current route', () => {
+    localStorage.setItem('chosenLanguage', 'en');
+    window.history.replaceState({}, '', '/login');
 
     service.initialize().subscribe();
 
@@ -44,6 +45,25 @@ describe('I18nService', () => {
     expect(service.translate('greeting', { name: 'Dmitry' })).toBe('Hello, Dmitry');
     expect(document.documentElement.lang).toBe('en');
     expect(localStorage.getItem('chosenLanguage')).toBe('en');
+  });
+
+  it('falls back to the backend default when the stored language is unsupported', () => {
+    localStorage.setItem('chosenLanguage', 'de');
+    window.history.replaceState({}, '', '/admin-panel/dashboard');
+
+    service.initialize().subscribe();
+
+    httpMock
+      .expectOne((request) => request.url.endsWith('/api/i18n/languages'))
+      .flush(languagesDto());
+    httpMock
+      .expectOne((request) => request.url.endsWith('/api/i18n/bundles/ru'))
+      .flush({ language: 'ru', messages: { greeting: 'Привет, {name}' } });
+
+    expect(service.language()).toBe('ru');
+    expect(service.translate('greeting', { name: 'Дмитрий' })).toBe('Привет, Дмитрий');
+    expect(document.documentElement.lang).toBe('ru');
+    expect(localStorage.getItem('chosenLanguage')).toBe('ru');
   });
 
   it('reuses a previously loaded language bundle when switching back', () => {

@@ -4,10 +4,8 @@ import { verifyLighthouseReports } from './lighthouse_report_verifier.mjs';
 
 const origin = 'http://127.0.0.1:4210';
 const expectedUrls = [
-  `${origin}/ru/how-this-site-is-built`,
-  `${origin}/en/how-this-site-is-built`,
-  `${origin}/ru/updates`,
-  `${origin}/en/updates`,
+  `${origin}/login`,
+  `${origin}/admin-panel/dashboard`,
 ];
 
 await verifyLighthouseReports({
@@ -16,4 +14,4 @@ await verifyLighthouseReports({
   runsPerUrl: 3,
   startedAtEpochMs: Number(process.argv[3]),
 });
-console.log('Verified 12 fresh CSR Lighthouse reports.');
+console.log('Verified 6 fresh CSR Lighthouse reports.');

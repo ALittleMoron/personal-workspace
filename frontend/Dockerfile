@@ -24,4 +24,4 @@ COPY --from=builder --chown=node:node /app/dist/personal-workspace-frontend ./di
 
 USER node
 EXPOSE 4000
-CMD ["node", "dist/personal-workspace-frontend/server/server.js"]
+CMD ["node", "dist/personal-workspace-frontend/runtime/static-runtime.js"]

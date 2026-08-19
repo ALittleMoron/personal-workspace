@@ -13,10 +13,10 @@
 | DevOps | ![docker](./badges/docker.svg) ![nginx](./badges/nginx.svg) ![minio](./badges/minio.svg) ![docker-compose](./badges/docker-compose.svg) |
 | Качество | ![ruff](./badges/ruff.svg) ![mypy](./badges/mypy.svg) ![bandit](./badges/bandit.svg) ![pip-audit](./badges/pip-audit.svg) ![trivy](./badges/trivy.svg) ![hadolint](./badges/hadolint.svg) ![dockle](./badges/dockle.svg) ![vulture](./badges/vulture.svg) ![eslint](./badges/eslint.svg) ![prettier](./badges/prettier.svg) |
 
-Портфолио с локализованной публичной case-study страницей и обновлениями, а также с приватным
-рабочим пространством администратора для резюме и базы знаний. Настроенный через окружение
-аутентифицированный владелец использует зашифрованную сессию для доступа к `/api/admin/*`; доступ
-к доменным данным остаётся ограниченным автором для будущей многопользовательской модели.
+Приватное личное рабочее пространство для резюме и базы знаний. `/login` — единственный
+анонимный UI-маршрут; настроенный через окружение аутентифицированный владелец использует
+зашифрованную сессию для доступа к `/api/admin/*`, а доступ к доменным данным остаётся ограниченным
+автором для будущей многопользовательской модели.
 
 ## Документация
 
@@ -88,5 +88,6 @@ make query-plans-realistic
 make performance-lighthouse
 ```
 
-Query-plan gate проверяет актуальные storage-запросы Knowledge и Resume. Lighthouse проверяет CSR
-маршруты по performance, accessibility и best practices.
+Query-plan gate проверяет актуальные storage-запросы Knowledge и Resume. Lighthouse проверяет
+CSR-маршруты входа и аутентифицированной рабочей области по performance, accessibility и best
+practices.

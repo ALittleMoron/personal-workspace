@@ -65,8 +65,9 @@ for the host firewall and peer setup.
 The stack uses blue/green backend and frontend slots. `make run` brings up dependencies, runs the
 one-shot backend bucket initializer, starts the inactive slot, waits for health checks, switches
 nginx, runs edge smoke checks, records the active slot and drains the previous slot. The Angular
-runtime is CSR-only: the frontend container is a Node static shell with `PORT=4000`, a `/healthz`
-endpoint and per-request CSP nonce substitution.
+runtime is CSR-only: the frontend container is a nonce-aware Node static shell with `PORT=4000`, a
+`/healthz` endpoint and per-request CSP nonce substitution. `/login` is the only anonymous UI;
+the workspace requires an authenticated session.
 
 ## TLS
 
@@ -127,5 +128,7 @@ make security-nginx-docker-image IMAGE_TAG=local-security-check
 
 After deployment, verify `https://<APP_DOMAIN>/api/healthcheck` and
 `https://<APP_DOMAIN>/healthz`, inspect the active Compose services, and repeat the private-bucket
-and WireGuard acceptance checks. Query plans are a blocking check for retained Knowledge and Resume
-storage paths. Lighthouse audits CSR performance, accessibility and best practices.
+and WireGuard acceptance checks. Confirm that `/login` is reachable anonymously and the workspace
+requires a session. Query plans are a blocking check for retained Knowledge and Resume storage
+paths. Lighthouse audits the CSR login and authenticated workspace for performance, accessibility,
+and best practices.

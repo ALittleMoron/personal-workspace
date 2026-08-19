@@ -4,7 +4,7 @@ import { I18nParams, LanguageCode } from '../core/i18n/i18n.model';
 import { I18nService } from '../core/i18n/i18n.service';
 
 const I18N_TEST_MESSAGES: Record<string, string> = {
-  'app.siteName': 'Мой сайт',
+  'app.siteName': 'Личное рабочее пространство',
   'shared.back': 'Назад',
   'shared.next': 'Вперёд',
   'shared.edit': 'Редактировать',
@@ -129,20 +129,11 @@ const I18N_TEST_MESSAGES: Record<string, string> = {
   'enum.role.moderator': 'Модератор',
   'enum.role.admin': 'Администратор',
   'enum.role.owner': 'Владелец',
-  'shell.footer.sourceCode': 'Исходный код',
-  'shell.footer.siteBuild': 'Как устроен сайт',
-  'shell.footer.updates': 'Обновления',
-  'shell.footer.email': 'Эл. почта',
-  'shell.footer.githubProfile': 'Профиль GitHub',
-  'shell.footer.telegramProfile': 'Профиль Telegram',
-  'shell.footer.linkedinProfile': 'Профиль LinkedIn',
-  'shell.nav.adminPanel': 'Админ-панель',
   'shell.theme.dark': 'Dark',
   'shell.theme.light': 'Light',
   'shell.theme.toggle': 'Переключить тему',
   'shell.language.label': 'Язык',
   'adminPanel.title': 'Админ-панель',
-  'adminPanel.header.backToHome': 'На главную',
   'adminPanel.sidePanel.open': 'Открыть разделы',
   'adminPanel.sidePanel.close': 'Скрыть разделы',
   'adminPanel.sections': 'Разделы',
@@ -365,8 +356,6 @@ const I18N_TEST_MESSAGES: Record<string, string> = {
   'adminResumeWorkspace.missing.summary': 'Добавьте саммари.',
   'adminResumeWorkspace.missing.skills': 'Добавьте навыки.',
   'adminResumeWorkspace.missing.experience': 'Добавьте опыт.',
-  'siteBuild.title': 'Как устроен сайт',
-  'updates.title': 'Обновления',
   'notFound.title': 'Страница не найдена',
   'shared.datePicker.placeholder': 'дд.мм.гггг',
   'shared.datePicker.open': 'Открыть календарь',
@@ -384,7 +373,7 @@ const I18N_TEST_MESSAGES: Record<string, string> = {
   'shared.datePicker.requiredDate': 'Укажите дату.',
   'shared.datePicker.keyboardHelp':
     'Используйте стрелки для выбора дня, Page Up и Page Down для смены месяца.',
-  'notFound.home': 'Вернуться на главную',
+  'notFound.workspace': 'В рабочую область',
 };
 
 const I18N_TEST_MESSAGES_EN: Record<string, string> = {
@@ -477,9 +466,8 @@ const I18N_TEST_MESSAGES_EN: Record<string, string> = {
   'adminResumeWorkspace.missing.summary': 'Add a summary.',
   'adminResumeWorkspace.missing.skills': 'Add skills.',
   'adminResumeWorkspace.missing.experience': 'Add experience.',
-  'siteBuild.title': 'How this site is built',
-  'updates.title': 'Updates',
   'notFound.title': 'Page not found',
+  'notFound.workspace': 'Go to workspace',
 };
 
 export function provideI18nTesting(messages: Record<string, string> = {}): Provider {

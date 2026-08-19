@@ -11,16 +11,16 @@ const CSP_NONCE_PLACEHOLDER = '__CSP_NONCE__';
 const CSP_NONCE_PATTERN = /^[A-Za-z0-9+/_-]{16,128}={0,2}$/;
 const HTML_ACCEPT_PATTERN = /(?:^|[,;\s])(?:text\/html|application\/xhtml\+xml)(?:$|[,;\s])/i;
 
-interface CreateExpressAppOptions {
+interface CreateStaticRuntimeAppOptions {
   readonly browserDistFolder: string;
 }
 
-interface StartStaticServerOptions {
+interface StartStaticRuntimeServerOptions {
   readonly app: express.Express;
   readonly port: number;
 }
 
-export function createExpressApp(options: CreateExpressAppOptions): express.Express {
+export function createStaticRuntimeApp(options: CreateStaticRuntimeAppOptions): express.Express {
   const app = express();
   const indexShell = readFileSync(join(options.browserDistFolder, 'index.html'), 'utf8');
   const staticFiles = express.static(options.browserDistFolder, {
@@ -65,9 +65,9 @@ export function createExpressApp(options: CreateExpressAppOptions): express.Expr
   return app;
 }
 
-export function startStaticServer(options: StartStaticServerOptions): Server {
+export function startStaticRuntimeServer(options: StartStaticRuntimeServerOptions): Server {
   const server = options.app.listen(options.port, () => {
-    console.log(`Node Express server listening on http://localhost:${options.port}`);
+    console.log(`Node static runtime listening on http://localhost:${options.port}`);
   });
   server.ref();
   return server;

@@ -10,7 +10,7 @@ These rules apply to every file under `frontend/src/app/core/editor/`.
   selection, history, unsaved value, and upload anchors when changing modes or fullscreen state.
 - Build on direct modular CodeMirror 6 packages and public extension points. Do not depend on copied
   internals, an Angular CodeMirror wrapper, `basicSetup`, or raw mutation of CodeMirror-owned DOM.
-- Keep the Angular component focused on lifecycle, accessibility, i18n, SSR/browser boundaries,
+- Keep the Angular component focused on browser lifecycle, accessibility, i18n, CSP boundaries,
   uploads, and integration. Put commands, Markdown semantics, presentation, and table behavior in
   cohesive Angular-independent modules.
 - Apply local edits as minimal CodeMirror transactions so undo/redo, selections, history, parser
@@ -37,11 +37,11 @@ These rules apply to every file under `frontend/src/app/core/editor/`.
   undoable, malformed input stays editable, and keyboard, pointer, clipboard, selection, and
   adjacent-prose behavior remain accessible and deterministic.
 
-## Security, SSR, and Styling
+## Security, Browser Lifecycle, and Styling
 
-- Treat SSR as a render-only path. Guard CodeMirror setup, DOM access, storage, timers, clipboard,
-  downloads, uploads, focus management, geometry, and other browser-only capabilities with injected
-  platform/document abstractions.
+- Keep CodeMirror setup, DOM access, storage, timers, clipboard, downloads, uploads, focus
+  management, geometry, and other browser-only capabilities inside lifecycle-aware code using
+  injected platform/document abstractions; do not access browser globals at module scope.
 - Pass Angular's CSP nonce to CodeMirror's supported nonce configuration. Keep compiled editor styles
   component-scoped and lazy; do not introduce runtime inline positioning, copied CodeMirror base
   styles, broader CSP sources, or global editor theme imports.
@@ -66,5 +66,5 @@ These rules apply to every file under `frontend/src/app/core/editor/`.
   metrics, clipboard permissions, or all IME behavior. Report any remaining browser-only gap and ask
   the user to confirm the required manual browser check before claiming that behavior is verified.
 - Run the relevant focused editor suites during red/green work and the applicable frontend Make
-  checks before completion, then review for regressions, flaky timing, accessibility gaps, SSR/CSP
+  checks before completion, then review for regressions, flaky timing, accessibility gaps, CSP
   violations, and untested browser-only behavior.

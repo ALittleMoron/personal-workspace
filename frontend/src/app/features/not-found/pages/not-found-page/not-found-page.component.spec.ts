@@ -29,12 +29,12 @@ describe('NotFoundPageComponent', () => {
     document.head.innerHTML = originalHead;
   });
 
-  it('links back to the localized public home', () => {
+  it('links back to the private workspace dashboard', () => {
     const link = fixture.nativeElement.querySelector('a') as HTMLAnchorElement | null;
 
     expect(link).not.toBeNull();
-    expect(link?.getAttribute('href')).toBe('/ru/how-this-site-is-built');
-    expect(link?.textContent?.trim()).toBe('Вернуться на главную');
+    expect(link?.getAttribute('href')).toBe('/admin-panel/dashboard');
+    expect(link?.textContent?.trim()).toBe('В рабочую область');
   });
 
   it('leaves document metadata ownership outside the page component', () => {

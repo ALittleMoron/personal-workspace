@@ -23,9 +23,10 @@ make format-check
 make build
 ```
 
-The production browser build is under `dist/personal-workspace-frontend/browser`; `tsconfig.server.json`
-compiles the small Node static server under `dist/personal-workspace-frontend/server`. The runtime requires an
-explicit positive `PORT` and Compose provides `PORT=4000`.
+The production browser build is under `dist/personal-workspace-frontend/browser`;
+`tsconfig.runtime.json` compiles the small Node static runtime under
+`dist/personal-workspace-frontend/runtime`. The runtime requires an explicit positive `PORT`, and
+Compose provides `PORT=4000`.
 
 ## Lighthouse
 
@@ -35,8 +36,8 @@ Run the CSR quality gate with:
 make lighthouse
 ```
 
-It builds the application, uses the static server and audits the localized public case-study and
-updates routes for performance, accessibility and best practices. Reports are written to
+It builds the application, uses the static server, and audits the anonymous login and authenticated
+workspace routes for performance, accessibility, and best practices. Reports are written to
 `performance/reports/lighthouse/`.
 
 ## Docker image
@@ -49,7 +50,8 @@ docker build -t "personal_workspace_frontend:${IMAGE_TAG:?set IMAGE_TAG}" .
 
 The builder and runtime use the pinned Node Alpine image. The runtime installs production
 dependencies, removes npm tooling/cache, runs as the non-root `node` user with a read-only root
-filesystem supplied by Compose, and starts `dist/personal-workspace-frontend/server/server.js`.
+filesystem supplied by Compose, and starts
+`dist/personal-workspace-frontend/runtime/static-runtime.js`.
 
 ## Repository boundary
 

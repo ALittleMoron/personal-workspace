@@ -22,7 +22,7 @@ class TestI18nApi(ApiTestCase):
         self.asserts.status(response=response, expected_status=codes.OK)
         body = response.json()
         assert body["language"] == "en"
-        assert body["messages"]["shell.footer.email"] == "Email"
+        assert body["messages"]["auth.login.title"] == "Sign in"
         assert body["messages"]["adminPanel.title"] == "Admin panel"
         assert body["messages"]["enum.publishStatus.Draft"] == "Draft"
 

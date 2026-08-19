@@ -159,7 +159,7 @@ class CoreFactoryHelper:
                             name="Portfolio",
                             role="Creator",
                             description="Site and knowledge base",
-                            highlights=["Hybrid SSR/CSR"],
+                            highlights=["Angular CSR"],
                             technologies=["Litestar", "Angular"],
                             url="https://example.com",
                         ),

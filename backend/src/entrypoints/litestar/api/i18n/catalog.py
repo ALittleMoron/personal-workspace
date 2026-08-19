@@ -7,27 +7,11 @@ LanguageMessages = Mapping[str, str]
 
 MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
     LanguageEnum.RU: {
-        "app.siteName": "Мой сайт",
-        "shell.nav.adminPanel": "Админ-панель",
-        "shell.nav.toggleNavigation": "Открыть навигацию",
+        "app.siteName": "Личное рабочее пространство",
         "shell.theme.light": "Light",
         "shell.theme.dark": "Dark",
         "shell.theme.toggle": "Переключить тему",
         "shell.language.label": "Язык",
-        "shell.footer.docs": "Документация",
-        "shell.footer.sourceCode": "Исходный код",
-        "shell.footer.siteBuild": "Как устроен сайт",
-        "shell.footer.updates": "Обновления",
-        "shell.footer.email": "Эл. почта",
-        "shell.footer.githubProfile": "Профиль GitHub",
-        "shell.footer.telegramProfile": "Профиль Telegram",
-        "shell.footer.linkedinProfile": "Профиль LinkedIn",
-        "shell.cookie.text": (
-            "Сайт использует локальное хранилище для базовой работы интерфейса, "
-            "сохранения настроек и анонимных реакций. Просмотры считаются агрегированно, "
-            "без аналитических cookies."
-        ),
-        "shell.cookie.accept": "Хорошо",
         "shared.loading": "Загрузка",
         "shared.retry": "Повторить",
         "shared.empty": "Ничего не найдено.",
@@ -169,7 +153,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "auth.logout.failed": "Не удалось выйти. Попробуйте ещё раз.",
         "auth.currentUser": "Текущий пользователь",
         "adminPanel.title": "Админ-панель",
-        "adminPanel.header.backToHome": "На главную",
         "adminPanel.sidePanel.open": "Открыть разделы",
         "adminPanel.sidePanel.close": "Скрыть разделы",
         "adminPanel.sections": "Разделы",
@@ -567,85 +550,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "adminResumeWorkspace.missing.summary": "Добавьте саммари.",
         "adminResumeWorkspace.missing.skills": "Добавьте навыки.",
         "adminResumeWorkspace.missing.experience": "Добавьте опыт.",
-        "siteBuild.title": "Как устроен сайт",
-        "siteBuild.hero.kicker": "Инженерный разбор",
-        "siteBuild.hero.title": "Как устроен этот сайт",
-        "siteBuild.hero.lead": (
-            "Инженерный разбор production-подхода: архитектура, локализация, "
-            "контент-редактирование, качество, безопасность и инфраструктура в одной "
-            "базе знаний."
-        ),
-        "siteBuild.hero.sourceCode": "Исходный код",
-        "siteBuild.hero.logoAlt": "Логотип сайта",
-        "siteBuild.architecture.title": "Архитектура",
-        "siteBuild.architecture.backendTitle": "Backend",
-        "siteBuild.architecture.backendBody": (
-            "Litestar, SQLAlchemy, Dishka и PostgreSQL образуют API-first backend с "
-            "явными границами между доменом, HTTP-слоем, инфраструктурой и хранением. "
-            "Приватная база знаний расширяет общий типизированный item отдельными 1:1-таблицами "
-            "вместо универсального JSON/EAV, а каждая операция изолируется по автору."
-        ),
-        "siteBuild.architecture.frontendTitle": "Frontend",
-        "siteBuild.architecture.frontendBody": (
-            "Angular 22 работает как CSR-приложение для публичных и административных "
-            "маршрутов. Интерфейсные строки загружаются из backend i18n bundle, а Node/Express "
-            "подставляет request CSP nonce в статический shell, сохраняя строгую CSP."
-        ),
-        "siteBuild.architecture.infraTitle": "Infrastructure",
-        "siteBuild.architecture.infraBody": (
-            "nginx, Docker, MinIO с S3-compatible media storage, Valkey и TaskIQ разделяют "
-            "edge routing, файлы, кэш, фоновые задачи и runtime frontend/backend контейнеров, "
-            "а публичный трафик переключается между blue/green слотами после health checks. "
-            "Приватные файлы базы знаний вынесены в отдельный MinIO bucket без публичных URL: "
-            "backend проверяет автора и стримит содержимое, а публичный S3 edge отвечает 404. "
-            "Для public-media PostgreSQL отслеживает жизненный цикл ссылок, а фоновая "
-            "TaskIQ-задача безопасно удаляет неиспользуемые объекты после настраиваемого периода "
-            "хранения и повторяет неудачные операции. "
-            "Edge nginx самовосстанавливается после устойчивого отказа локального liveness "
-            "endpoint и использует restart policy для перезапуска Docker или VPS."
-        ),
-        "siteBuild.decisions.title": "Инженерные решения",
-        "siteBuild.decision.cleanArchitecture": (
-            "Clean Architecture: доменная логика не зависит от Litestar, SQLAlchemy или "
-            "внешних сервисов."
-        ),
-        "siteBuild.decision.deployManifest": (
-            "Деплой оформлен как управляемый release process с ручным запуском: "
-            "runtime-конфигурация собирается из manifest, CI quality gates отделены "
-            "от deploy workflow, ручное подтверждение production environment остаётся "
-            "явным, а blue/green переключение с health checks снижает риск релиза."
-        ),
-        "siteBuild.quality.title": "Качество и эксплуатация",
-        "siteBuild.quality.body": (
-            "Качество держится на коротких проверках: стиль, типы, unit/integration тесты, "
-            "безопасность, CSR delivery smoke, производительность и SQL-планы. "
-            "Они остаются CI evidence перед релизом, а production deploy запускается вручную "
-            "и переключает blue/green трафик только после health checks. В эксплуатации "
-            "фоновые задачи, кэш, файлы и runtime контейнеры разделены по ответственности; "
-            "публичные ассеты обслуживаются с CSP и immutable caching."
-        ),
-        "siteBuild.next.title": "Что дальше",
-        "siteBuild.next.body": (
-            "Ближайшие направления: RSS/Atom, публичный roadmap и дальнейшая "
-            "работа над наблюдаемостью, производительностью и качеством контента."
-        ),
-        "updates.title": "Обновления",
-        "updates.hero.kicker": "Журнал изменений",
-        "updates.hero.title": "Обновления сайта",
-        "updates.hero.lead": (
-            "Крупные изменения сайта и базы знаний, сгруппированные по месяцам: "
-            "публичный контент, админка, качество, безопасность и инфраструктура."
-        ),
-        "updates.tag.frontend": "Frontend",
-        "updates.tag.backend": "Backend",
-        "updates.tag.content": "Контент",
-        "updates.tag.analytics": "Аналитика",
-        "updates.tag.infra": "Инфраструктура",
-        "updates.tag.admin": "Админка",
-        "updates.tag.localization": "Локализация",
-        "updates.tag.quality": "Качество",
-        "updates.tag.security": "Безопасность",
-        "updates.tag.delivery": "Доставка",
         "shared.datePicker.placeholder": "дд.мм.гггг",
         "shared.datePicker.open": "Открыть календарь",
         "shared.datePicker.change": "Изменить дату",
@@ -665,7 +569,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         ),
         "notFound.title": "Страница не найдена",
         "notFound.message": "Страница не найдена.",
-        "notFound.home": "Вернуться на главную",
+        "notFound.workspace": "В рабочую область",
         "i18n.startupError.title": "Не удалось загрузить локализацию",
         "i18n.startupError.message": "Проверьте соединение с API и попробуйте ещё раз.",
         "i18n.startupError.retry": "Повторить",
@@ -673,26 +577,11 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "enum.publishStatus.Published": "Опубликовано",
     },
     LanguageEnum.EN: {
-        "app.siteName": "My site",
-        "shell.nav.adminPanel": "Admin panel",
-        "shell.nav.toggleNavigation": "Toggle navigation",
+        "app.siteName": "Personal workspace",
         "shell.theme.light": "Light",
         "shell.theme.dark": "Dark",
         "shell.theme.toggle": "Toggle theme",
         "shell.language.label": "Language",
-        "shell.footer.docs": "Documentation",
-        "shell.footer.sourceCode": "Source code",
-        "shell.footer.siteBuild": "How this site is built",
-        "shell.footer.updates": "Updates",
-        "shell.footer.email": "Email",
-        "shell.footer.githubProfile": "GitHub profile",
-        "shell.footer.telegramProfile": "Telegram profile",
-        "shell.footer.linkedinProfile": "LinkedIn profile",
-        "shell.cookie.text": (
-            "The site uses local storage for core interface behavior, saved preferences, "
-            "and anonymous reactions. Views are counted in aggregate without analytics cookies."
-        ),
-        "shell.cookie.accept": "OK",
         "shared.loading": "Loading",
         "shared.retry": "Retry",
         "shared.empty": "No items found.",
@@ -832,7 +721,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "auth.logout.failed": "Could not sign out. Please try again.",
         "auth.currentUser": "Current user",
         "adminPanel.title": "Admin panel",
-        "adminPanel.header.backToHome": "Home",
         "adminPanel.sidePanel.open": "Open sections",
         "adminPanel.sidePanel.close": "Hide sections",
         "adminPanel.sections": "Sections",
@@ -1228,86 +1116,6 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         "adminResumeWorkspace.missing.summary": "Add a summary.",
         "adminResumeWorkspace.missing.skills": "Add skills.",
         "adminResumeWorkspace.missing.experience": "Add experience.",
-        "siteBuild.title": "How this site is built",
-        "siteBuild.hero.kicker": "Engineering case study",
-        "siteBuild.hero.title": "How this site is built",
-        "siteBuild.hero.lead": (
-            "Engineering case study of a production-minded knowledge base: architecture, "
-            "localization, content authoring, quality, security, and infrastructure."
-        ),
-        "siteBuild.hero.sourceCode": "Source code",
-        "siteBuild.hero.logoAlt": "Site logo",
-        "siteBuild.architecture.title": "Architecture",
-        "siteBuild.architecture.backendTitle": "Backend",
-        "siteBuild.architecture.backendBody": (
-            "Litestar, SQLAlchemy, Dishka, and PostgreSQL form an API-first backend with "
-            "explicit boundaries between domain logic, HTTP, infrastructure, and storage. "
-            "The private knowledge base extends a typed common item with dedicated one-to-one "
-            "tables instead of universal JSON/EAV, while every operation is author-isolated."
-        ),
-        "siteBuild.architecture.frontendTitle": "Frontend",
-        "siteBuild.architecture.frontendBody": (
-            "Angular 22 runs as a CSR application for both public and administrative routes. "
-            "Interface strings load from the backend i18n bundle, while Node/Express injects "
-            "the request CSP nonce into the static shell to preserve a strict CSP."
-        ),
-        "siteBuild.architecture.infraTitle": "Infrastructure",
-        "siteBuild.architecture.infraBody": (
-            "nginx, Docker, MinIO with S3-compatible media storage, Valkey, and TaskIQ "
-            "separate edge routing, files, cache, background jobs, and frontend/backend "
-            "container runtimes, while public traffic switches between blue/green slots only "
-            "after health checks pass. Private knowledge files use a separate MinIO bucket with "
-            "no public URLs: the backend author-checks and streams content, while the public S3 "
-            "edge returns 404. For public media, PostgreSQL tracks the reference lifecycle, while "
-            "a background TaskIQ job safely removes unused objects after a configurable retention "
-            "period and retries failed operations. The "
-            "edge nginx self-recovers after a sustained local "
-            "liveness failure and uses a restart policy for Docker daemon or VPS restarts."
-        ),
-        "siteBuild.decisions.title": "Engineering decisions",
-        "siteBuild.decision.cleanArchitecture": (
-            "Clean Architecture keeps domain logic independent from Litestar, SQLAlchemy, "
-            "and external services."
-        ),
-        "siteBuild.decision.deployManifest": (
-            "Deployment is treated as a controlled release process with a manual trigger: "
-            "runtime configuration is rendered from a manifest, CI quality gates are "
-            "decoupled from the deploy workflow, manual approval on the production "
-            "environment remains explicit, and blue/green switching with health checks "
-            "lowers rollout risk."
-        ),
-        "siteBuild.quality.title": "Quality and operations",
-        "siteBuild.quality.body": (
-            "Quality is covered by short checks: style, types, unit/integration tests, security, "
-            "CSR delivery smoke, performance, and SQL plans. They remain CI release evidence, "
-            "while "
-            "production deploy runs manually and switches blue/green traffic only after health "
-            "checks pass. In operations, background jobs, cache, files, and runtime containers "
-            "have separate responsibilities; public assets are served with CSP and immutable "
-            "caching."
-        ),
-        "siteBuild.next.title": "What is next",
-        "siteBuild.next.body": (
-            "Near-term work includes RSS/Atom, a public roadmap, and continued "
-            "work on observability, performance, and content quality."
-        ),
-        "updates.title": "Updates",
-        "updates.hero.kicker": "Changelog",
-        "updates.hero.title": "Updates",
-        "updates.hero.lead": (
-            "Major changes to the site and knowledge base, grouped by month: public "
-            "content, admin workflows, quality, security, and infrastructure."
-        ),
-        "updates.tag.frontend": "Frontend",
-        "updates.tag.backend": "Backend",
-        "updates.tag.content": "Content",
-        "updates.tag.analytics": "Analytics",
-        "updates.tag.infra": "Infrastructure",
-        "updates.tag.admin": "Admin",
-        "updates.tag.localization": "Localization",
-        "updates.tag.quality": "Quality",
-        "updates.tag.security": "Security",
-        "updates.tag.delivery": "Delivery",
         "shared.datePicker.placeholder": "mm/dd/yyyy",
         "shared.datePicker.open": "Open calendar",
         "shared.datePicker.change": "Change date",
@@ -1327,7 +1135,7 @@ MESSAGES: Mapping[LanguageEnum, LanguageMessages] = {
         ),
         "notFound.title": "Page not found",
         "notFound.message": "Page not found.",
-        "notFound.home": "Back to home",
+        "notFound.workspace": "Go to workspace",
         "i18n.startupError.title": "Failed to load localization",
         "i18n.startupError.message": "Check the API connection and try again.",
         "i18n.startupError.retry": "Retry",

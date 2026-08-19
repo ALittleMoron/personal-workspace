@@ -33,7 +33,6 @@ describe('AdminPanelHeaderComponent', () => {
     ]);
     const messages: Record<string, string> = {
       'adminPanel.title': 'Админ-панель',
-      'adminPanel.header.backToHome': 'На главную',
       'shell.theme.dark': 'Dark',
       'shell.theme.light': 'Light',
       'shell.theme.toggle': 'Переключить тему',
@@ -84,15 +83,10 @@ describe('AdminPanelHeaderComponent', () => {
     navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   });
 
-  it('links the icon-only back control to the localized public home', () => {
+  it('keeps the workspace header focused on its title without a public-home exit', () => {
     const element = fixture.nativeElement as HTMLElement;
-    const homeLink = element.querySelector(
-      '[data-testid="admin-panel-home-link"]',
-    ) as HTMLAnchorElement | null;
 
-    expect(homeLink?.getAttribute('href')).toBe('/ru/how-this-site-is-built');
-    expect(homeLink?.getAttribute('aria-label')).toBe('На главную');
-    expect(homeLink?.textContent?.trim()).toBe('');
+    expect(element.querySelector('[data-testid="admin-panel-home-link"]')).toBeNull();
     expect(
       element.querySelector('[data-testid="admin-panel-header-title"]')?.textContent,
     ).toContain('Админ-панель');
@@ -107,7 +101,7 @@ describe('AdminPanelHeaderComponent', () => {
     expect(themeButton.textContent?.trim()).toBe('Light');
   });
 
-  it('switches the active language and updates the public-home destination', () => {
+  it('switches the active language in the workspace header', () => {
     const englishButton = buttonWithText('EN');
 
     englishButton.click();
@@ -115,11 +109,6 @@ describe('AdminPanelHeaderComponent', () => {
 
     expect(language()).toBe('en');
     expect(englishButton.getAttribute('aria-pressed')).toBe('true');
-    expect(
-      (fixture.nativeElement as HTMLElement)
-        .querySelector('[data-testid="admin-panel-home-link"]')
-        ?.getAttribute('href'),
-    ).toBe('/en/how-this-site-is-built');
   });
 
   it('renders the authenticated owner with a full-value tooltip', () => {

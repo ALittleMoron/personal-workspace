@@ -6,10 +6,8 @@ import test from 'node:test';
 import { verifyLighthouseReports } from './lighthouse_report_verifier.mjs';
 
 const expectedUrls = [
-  'http://127.0.0.1:4210/ru/how-this-site-is-built',
-  'http://127.0.0.1:4210/en/how-this-site-is-built',
-  'http://127.0.0.1:4210/ru/updates',
-  'http://127.0.0.1:4210/en/updates',
+  'http://127.0.0.1:4210/login',
+  'http://127.0.0.1:4210/admin-panel/dashboard',
 ];
 
 test('accepts only fresh complete CSR Lighthouse reports for every configured route', async () => {
@@ -31,7 +29,7 @@ test('rejects duplicate route reports even when the total report count is correc
 
   try {
     await writeCompleteReportSet(reportDirectory, startedAtEpochMs);
-    await rm(join(reportDirectory, 'route-11.report.json'));
+    await rm(join(reportDirectory, 'route-5.report.json'));
     await writeReport(
       reportDirectory,
       'duplicate.report.json',
@@ -42,7 +40,7 @@ test('rejects duplicate route reports even when the total report count is correc
 
     await assert.rejects(
       verifyLighthouseReports({ reportDirectory, expectedUrls, runsPerUrl: 3, startedAtEpochMs }),
-      /Expected exactly 3 Lighthouse reports for .*ru\/how-this-site-is-built, found 4/,
+      /Expected exactly 3 Lighthouse reports for .*login, found 4/,
     );
   } finally {
     await rm(reportDirectory, { recursive: true, force: true });

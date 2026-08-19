@@ -1,4 +1,20 @@
 const LHCI_ORIGIN = 'http://127.0.0.1:4210';
+const collectMode = process.env.LHCI_COLLECT_MODE ?? 'anonymous';
+const collectTarget =
+  collectMode === 'authenticated'
+    ? {
+        url: `${LHCI_ORIGIN}/admin-panel/dashboard`,
+        extraHeaders: {
+          'x-csp-nonce': 'lighthouse-csp-nonce',
+          'x-lighthouse-authenticated': 'owner',
+        },
+      }
+    : {
+        url: `${LHCI_ORIGIN}/login`,
+        extraHeaders: {
+          'x-csp-nonce': 'lighthouse-csp-nonce',
+        },
+      };
 
 module.exports = {
   ci: {
@@ -7,19 +23,12 @@ module.exports = {
       startServerReadyPattern: 'Lighthouse server ready',
       startServerReadyTimeout: 60000,
       numberOfRuns: 3,
-      url: [
-        `${LHCI_ORIGIN}/ru/how-this-site-is-built`,
-        `${LHCI_ORIGIN}/en/how-this-site-is-built`,
-        `${LHCI_ORIGIN}/ru/updates`,
-        `${LHCI_ORIGIN}/en/updates`,
-      ],
+      url: [collectTarget.url],
       settings: {
         preset: 'desktop',
         onlyCategories: ['performance', 'accessibility', 'best-practices'],
         budgetPath: './lighthouse/budgets.json',
-        extraHeaders: {
-          'x-csp-nonce': 'lighthouse-csp-nonce',
-        },
+        extraHeaders: collectTarget.extraHeaders,
       },
     },
     assert: {

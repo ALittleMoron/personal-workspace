@@ -4,7 +4,11 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createExpressApp, readRequiredPort, startStaticServer } from './server-app';
+import {
+  createStaticRuntimeApp,
+  readRequiredPort,
+  startStaticRuntimeServer,
+} from './static-runtime-app';
 
 const VALID_NONCE = 'request_nonce-1234567890';
 const INDEX_SHELL = `<!doctype html>
@@ -13,13 +17,13 @@ const INDEX_SHELL = `<!doctype html>
   <body><app-root ngCspNonce="__CSP_NONCE__"></app-root></body>
 </html>`;
 
-describe('static frontend server', () => {
+describe('static frontend runtime', () => {
   let browserDistFolder: string;
   let server: Server;
   let origin: string;
 
   beforeAll(async () => {
-    browserDistFolder = await mkdtemp(join(tmpdir(), 'frontend-static-server-'));
+    browserDistFolder = await mkdtemp(join(tmpdir(), 'frontend-static-runtime-'));
     await Promise.all([
       writeFile(join(browserDistFolder, 'index.html'), INDEX_SHELL),
       writeFile(join(browserDistFolder, 'main-abcdef123456.js'), 'console.log("hashed");'),
@@ -29,8 +33,8 @@ describe('static frontend server', () => {
       writeFile(join(browserDistFolder, 'favicon.ico'), 'stable asset'),
     ]);
 
-    const app = createExpressApp({ browserDistFolder });
-    server = app.listen(0, '127.0.0.1');
+    const app = createStaticRuntimeApp({ browserDistFolder });
+    server = startStaticRuntimeServer({ app, port: 0 });
     await new Promise<void>((resolve, reject) => {
       server.once('listening', resolve);
       server.once('error', reject);
@@ -77,28 +81,31 @@ describe('static frontend server', () => {
     expect(await response.text()).toBe('stable asset');
   });
 
-  it('serves the nonce-injected index shell for an HTML navigation', async () => {
-    const response = await fetch(`${origin}/en/updates`, {
-      headers: {
-        Accept: 'text/html,application/xhtml+xml',
-        'X-CSP-Nonce': VALID_NONCE,
-      },
-    });
-    const body = await response.text();
+  it.each(['/login', '/admin-panel/dashboard'])(
+    'serves the nonce-injected index shell for the SPA navigation %s',
+    async (path) => {
+      const response = await fetch(`${origin}${path}`, {
+        headers: {
+          Accept: 'text/html,application/xhtml+xml',
+          'X-CSP-Nonce': VALID_NONCE,
+        },
+      });
+      const body = await response.text();
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toContain('text/html');
-    expect(response.headers.get('cache-control')).toBe('no-store');
-    expect(body).toContain(`nonce="${VALID_NONCE}"`);
-    expect(body).toContain(`ngCspNonce="${VALID_NONCE}"`);
-    expect(body).not.toContain('__CSP_NONCE__');
-  });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/html');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(body).toContain(`nonce="${VALID_NONCE}"`);
+      expect(body).toContain(`ngCspNonce="${VALID_NONCE}"`);
+      expect(body).not.toContain('__CSP_NONCE__');
+    },
+  );
 
   it.each([
     ['/missing.js', 'text/html'],
     ['/missing.png', 'image/avif,image/webp'],
-    ['/en/updates', 'application/json'],
-    ['/en/updates', 'text/html;q=0'],
+    ['/login', 'application/json'],
+    ['/admin-panel/dashboard', 'text/html;q=0'],
   ])('returns 404 instead of the shell for %s requested as %s', async (path, accept) => {
     const response = await fetch(`${origin}${path}`, {
       headers: { Accept: accept, 'X-CSP-Nonce': VALID_NONCE },
@@ -113,7 +120,7 @@ describe('static frontend server', () => {
       const headers: Record<string, string> = { Accept: 'text/html' };
       if (nonce !== undefined) headers['X-CSP-Nonce'] = nonce;
 
-      const response = await fetch(`${origin}/ru/how-this-site-is-built`, { headers });
+      const response = await fetch(`${origin}/login`, { headers });
       const body = await response.text();
 
       expect(response.status).toBe(500);
@@ -153,12 +160,12 @@ describe('readRequiredPort', () => {
   });
 });
 
-describe('frontend runtime entrypoint', () => {
+describe('static runtime entrypoint', () => {
   it('keeps the Node static shell referenced after it begins listening', async () => {
-    const runtimeBrowserDistFolder = await mkdtemp(join(tmpdir(), 'frontend-runtime-server-'));
+    const runtimeBrowserDistFolder = await mkdtemp(join(tmpdir(), 'frontend-static-runtime-'));
     await writeFile(join(runtimeBrowserDistFolder, 'index.html'), INDEX_SHELL);
-    const app = createExpressApp({ browserDistFolder: runtimeBrowserDistFolder });
-    const runtime = startStaticServer({ app, port: 0 });
+    const app = createStaticRuntimeApp({ browserDistFolder: runtimeBrowserDistFolder });
+    const runtime = startStaticRuntimeServer({ app, port: 0 });
 
     try {
       await new Promise<void>((resolve, reject) => {

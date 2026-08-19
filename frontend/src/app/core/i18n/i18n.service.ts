@@ -96,11 +96,6 @@ export class I18nService {
   }
 
   private resolveInitialLanguage(response: I18nLanguagesDto): LanguageCode {
-    const urlLanguage = this.resolveUrlLanguage();
-    if (urlLanguage && this.includesLanguage(response.languages, urlLanguage)) {
-      return urlLanguage;
-    }
-
     const stored = this.storage()?.getItem(STORAGE_KEY) ?? null;
     if (isLanguageCode(stored) && this.includesLanguage(response.languages, stored)) {
       return stored;
@@ -140,12 +135,6 @@ export class I18nService {
     this.language.set(language);
     this.startupError.set(false);
     this.document.documentElement.lang = language;
-  }
-
-  private resolveUrlLanguage(): LanguageCode | null {
-    const pathname = this.document.location?.pathname ?? '';
-    const firstSegment = pathname.split('/').find((segment) => segment.length > 0) ?? null;
-    return isLanguageCode(firstSegment) ? firstSegment : null;
   }
 
   private storage(): Storage | null {

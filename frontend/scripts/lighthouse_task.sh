@@ -34,7 +34,8 @@ rm -rf .lighthouseci performance/reports/lighthouse
 lighthouse_started_at_epoch_ms="$(( $(date +%s) * 1000 ))"
 
 npm run build
-npm run lhci -- collect --config=./lighthouserc.cjs
+LHCI_COLLECT_MODE=anonymous npm run lhci -- collect --config=./lighthouserc.cjs
+LHCI_COLLECT_MODE=authenticated npm run lhci -- collect --config=./lighthouserc.cjs --additive
 npm run lhci -- assert --config=./lighthouserc.cjs
 npm run lhci -- upload --config=./lighthouserc.cjs
 node scripts/verify_lighthouse_reports.mjs \

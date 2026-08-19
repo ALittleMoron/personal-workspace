@@ -6,9 +6,9 @@ deployment, and cross-service infrastructure belongs here or in the root Docker 
 
 ## Edge And Network Boundaries
 
-- Keep nginx as the public edge for TLS, public domains, `/api/*`, exact `/sitemap.xml` and
-  `/robots.txt`, the frontend SSR runtime, and the public MinIO object endpoint. VPN-only internal
-  panels must remain bound to `VPN_BIND_ADDRESS`.
+- Keep nginx as the public edge for TLS, public domains, `/api/*`, the frontend CSR static runtime,
+  and the public MinIO object endpoint. Do not add sitemap or robots edge locations: discovery
+  routes are deliberately absent. VPN-only internal panels must remain bound to `VPN_BIND_ADDRESS`.
 - Keep security headers and CSP at nginx. Add only the exact asset, external origin, Swagger/UI,
   upload-preview, or MinIO source required; do not use wildcard origins or broaden inline script or
   style allowances.

@@ -68,7 +68,7 @@ class TestResumeDocumentExporter(TestCase):
                 "- Reduced response time",
                 "Technologies: Python, PostgreSQL",
                 "Project: Portfolio | Creator",
-                "- Hybrid SSR/CSR",
+                "- Angular CSR",
                 "Education",
                 "University | Bachelor | Computer science",
                 "Moscow | Sep 2014 - Jun 2018",

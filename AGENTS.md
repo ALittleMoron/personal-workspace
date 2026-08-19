@@ -2,7 +2,8 @@
 
 ## Project
 
-Portfolio site with a knowledge database and resumes
+Private personal workspace with a knowledge database and resumes. `/login` is the only anonymous
+UI route.
 
 ## Stack
 
@@ -14,8 +15,8 @@ Portfolio site with a knowledge database and resumes
 - Background tasks: TaskIQ + taskiq-redis over Valkey
 - File storage: MinIO through an aiobotocore S3-compatible adapter
 - Logging: structlog + ECS logging + Sentry SDK
-- Frontend: Angular 22 hybrid SSR/CSR + Bootstrap 5, served by a frontend-owned Node.js SSR image
-- Edge: nginx reverse proxy for TLS, `/api/*`, exact `/sitemap.xml` and `/robots.txt`, frontend, the public MinIO object endpoint, and VPN-only internal web panel routing
+- Frontend: Angular 22 CSR + Bootstrap 5, served by a nonce-aware frontend-owned Node.js static runtime
+- Edge: nginx reverse proxy for TLS, `/api/*`, frontend, the public MinIO object endpoint, and VPN-only internal web panel routing; it intentionally exposes no sitemap/robots discovery routes
 
 ## General rules
 
@@ -64,27 +65,6 @@ Portfolio site with a knowledge database and resumes
   check whether infrastructure, documentation, CI/CD, and relevant `AGENTS.md` instructions must be
   updated; keep them consistent with the change.
   - At minimum, search related terms in `docs/`, `.github/`, root README-style files, and nested `AGENTS.md` files before finishing.
-  - After changes in code, architecture, implementation approach, accepted engineering decisions,
-    quality/security/operations posture, roadmap, or "what next" direction, explicitly analyze
-    whether the public "How this site is built" case-study page (`/ru/how-this-site-is-built`,
-    `/en/how-this-site-is-built`) should be updated. Decide what should be added, removed, or
-    changed there, and keep that page current when the change affects the site's public technical
-    story.
-  - Do not present trivial implementation facts, routine CRUD, ordinary normalized database
-    modeling, framework defaults, or other baseline engineering hygiene as "technology choices" or
-    public case-study highlights. The case-study page should mention only decisions that are
-    genuinely distinctive, risky, educational, or important to the product's architecture,
-    security, operations, UX, or quality story.
-  - Keep the public case-study conceptual and independent of current configuration. Do not include
-    exact retention periods, intervals, batch sizes, environment-variable names, or similarly
-    changeable operational values there; keep those details in deployment and operations
-    documentation.
-  - For sufficiently large user-visible, architectural, security, operations, or delivery changes,
-    ask whether the change should be added to the public updates/changelog page. Do not ask for
-    routine refactoring, small fixes, incidental cleanup, dependency churn, or implementation-only
-    details. Prefer grouping related changes under an existing larger milestone, such as
-    deployment, quality, localization, or content workflows, instead of creating a separate
-    updates entry for every task.
   - Treat every user correction and every explicit generally applicable instruction as a candidate
     for durable project guidance. At the end of each task, determine whether it is likely to remain
     useful in future sessions.

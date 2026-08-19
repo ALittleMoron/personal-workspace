@@ -6,7 +6,8 @@ under `frontend/`. Shared repository infrastructure and configuration must live 
 ## Stack
 
 - Angular 22, standalone components only
-- Angular hybrid rendering with `@angular/ssr`: public site-build case-study and updates routes use SSR, while interactive admin routes remain CSR/hydrated Angular.
+- Angular CSR application served by the nonce-aware Node static runtime. `/login` is the only
+  anonymous UI; authenticated users work in the private workspace.
 - Keep Angular framework packages, Angular CLI/build tooling, and `angular-eslint` on the same Angular major.
 - SCSS for styles
 - Bootstrap 5 via `styles/main.scss`
@@ -46,7 +47,7 @@ under `frontend/`. Shared repository infrastructure and configuration must live 
 - Prefer an established shared custom form control when required product visuals or interaction
   logic cannot be implemented correctly with a native control. Otherwise use the native control.
   Custom controls must preserve native-grade accessibility, keyboard behavior, Angular Forms
-  integration, validation, SSR safety, and CSP compatibility.
+  integration, validation, browser lifecycle safety, and CSP compatibility.
 - When users only need format guidance, keep the native control and provide visible localized hints
   and titles instead of adding custom parsing.
 
@@ -72,25 +73,25 @@ under `frontend/`. Shared repository infrastructure and configuration must live 
 - Services return `Observable<T>` — no Promises
 - Components consume via `toSignal()` or explicit `subscribe` with `DestroyRef` cleanup
 - DTOs mapped to UI models explicitly when field names or shapes differ
-- Sanitize any backend or user-provided Markdown/HTML before binding it with `[innerHTML]`; SSR paths must not depend on browser-only sanitizer APIs.
+- Sanitize any backend or user-provided Markdown/HTML before binding it with `[innerHTML]`.
 - Put reusable frontend upload helpers under `core/uploads/`, not `core/media/`; the latter matches
   a repository ignore pattern.
 - Fetch private-file content through backend APIs as `Blob` data. Browser object
   URLs are short-lived capabilities: revoke superseded URLs and release all remaining URLs on
   errors, navigation, and component destruction; never persist or expose them as backend object
   URLs.
-- Keep direct `localStorage` access in core services; feature components may use it only for local UI preferences and must cover that behavior with tests. All storage, `window`, `document.defaultView`, timer, analytics, reaction, upload, and DOM-download behavior must be guarded so public SSR detail pages can render without browser APIs.
+- Keep direct `localStorage` access in core services; feature components may use it only for local UI preferences and must cover that behavior with tests. Keep storage, `window`, `document.defaultView`, timer, analytics, reaction, upload, and DOM-download work in clear browser lifecycle boundaries that are testable without a live browser.
 
-## SSR and Browser APIs
+## Browser Lifecycle and CSP
 
-- Treat SSR as a pure render path. Browser-only capabilities such as storage, crypto, DOM mutation,
-  timers, analytics, reactions, downloads, uploads, and editor setup must be behind platform guards or
-  injected browser-document accessors and must not run during server rendering.
+- Keep browser-only capabilities such as storage, crypto, DOM mutation, timers, analytics,
+  reactions, downloads, uploads, and editor setup inside lifecycle-aware services or components;
+  do not read browser globals at module scope.
 - Browser capability helpers should fail closed: return `null`, skip work, or no-op when no browser
-  context exists, and callers must handle that absence explicitly instead of assuming the browser is
-  always available.
+  context exists, and callers must handle that absence explicitly.
 - When adding or changing storage-backed UI preferences, preserve browser persistence and add tests
-  that prove the same code path does not touch browser-only APIs with a server-like document.
+  that cover unavailable browser APIs. Keep the nonce-aware static shell and strict CSP compatible:
+  do not introduce inline script/style behavior or runtime positioning that requires broader CSP.
 
 ## Forms
 
@@ -138,7 +139,7 @@ These rules apply to frontend validation. The unit-test-specific guidance applie
 
 - When manually testing frontend routes in a browser, start the local service stack from the
   repository root with `make run` and test the app served by that stack. Do not replace this with
-  ad hoc Node/SSR harnesses, one-off mock servers, or direct `ng serve` runs unless `make run` is
+  ad hoc Node harnesses, one-off mock servers, or direct `ng serve` runs unless `make run` is
   unavailable or the task explicitly needs a narrower fallback; if a fallback is used, state why and
   clean it up before finishing.
 
@@ -193,8 +194,8 @@ TestBed.configureTestingModule({
 - Use `HttpTestingController` to assert requests and flush responses.
 - Test: correct URL called, response mapped to expected model shape.
 - Always call `httpMock.verify()` after each test.
-- When changing SSR route config, server entrypoints, public detail SEO, or transfer-cache behavior,
-  update focused unit tests and run the applicable frontend Make checks.
+- When changing the static runtime contract, login/workspace navigation, CSP nonce handling, or
+  Lighthouse fixtures, update focused unit tests and run the applicable frontend Make checks.
 - Review task-relevant coverage for every implementation change. Fully cover changed critical
   behavior, especially shared core and Markdown editor logic; repository coverage thresholds belong
   in test configuration, not in this file.
@@ -213,3 +214,9 @@ TestBed.configureTestingModule({
 
 Do not introduce or scaffold an end-to-end framework without an explicit project-level testing
 strategy decision.
+
+### Lighthouse Contract
+
+- Lighthouse covers the anonymous `/login` route and authenticated private workspace routes. Keep
+  those fixtures, budgets, and report verification focused on CSR bundles, accessibility,
+  performance, and best practices; do not restore public-content audits.
