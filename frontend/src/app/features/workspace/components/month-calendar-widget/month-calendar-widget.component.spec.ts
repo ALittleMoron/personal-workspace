@@ -44,7 +44,6 @@ describe('MonthCalendarWidgetComponent', () => {
       '[data-testid="dashboard-month-grid"]',
     ) as HTMLTableElement;
     expect(table.querySelectorAll('thead th')).toHaveLength(7);
-    expect(table.closest('.table-responsive')).not.toBeNull();
     expect(table.textContent).toContain('Годовщина');
     expect(table.textContent).toContain('Анна');
     expect(table.querySelector('a[href="/knowledge/dates/date-1"]')).not.toBeNull();

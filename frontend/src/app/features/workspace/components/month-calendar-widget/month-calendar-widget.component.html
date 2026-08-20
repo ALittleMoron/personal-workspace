@@ -91,59 +91,57 @@
       (retry)="loadSelectedMonth()"
     />
   } @else {
-    <div class="table-responsive">
-      <table
-        class="table table-bordered dashboard-month-grid mb-0"
-        data-testid="dashboard-month-grid"
-      >
-        <caption class="visually-hidden">
-          {{
-            monthLabel()
-          }}
-        </caption>
-        <thead>
+    <table
+      class="table table-bordered dashboard-month-grid mb-0"
+      data-testid="dashboard-month-grid"
+    >
+      <caption class="visually-hidden">
+        {{
+          monthLabel()
+        }}
+      </caption>
+      <thead>
+        <tr>
+          @for (weekday of weekdayLabels(); track weekday.long) {
+            <th scope="col" class="text-center">
+              <abbr class="text-decoration-none" [title]="weekday.long">{{ weekday.short }}</abbr>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of gridRows(); track $index) {
           <tr>
-            @for (weekday of weekdayLabels(); track weekday.long) {
-              <th scope="col" class="text-center">
-                <abbr class="text-decoration-none" [title]="weekday.long">{{ weekday.short }}</abbr>
-              </th>
+            @for (cell of row; track $index) {
+              <td
+                [class.dashboard-calendar-outside-month]="cell.day === null"
+                [class.dashboard-calendar-today]="isToday(cell.day)"
+                [attr.data-testid]="isToday(cell.day) ? 'dashboard-calendar-today' : null"
+              >
+                @if (cell.day !== null) {
+                  <div class="dashboard-calendar-day-number mb-1">
+                    {{ cell.day }}
+                    @if (isToday(cell.day)) {
+                      <span class="visually-hidden">{{ 'dashboard.calendar.today' | t }}</span>
+                    }
+                  </div>
+                  <div class="vstack gap-1">
+                    @for (entry of cell.entries; track entry.kind + ':' + entry.id) {
+                      <a
+                        class="dashboard-calendar-entry rounded px-1 py-0 text-decoration-none"
+                        [routerLink]="entryRoute(entry)"
+                      >
+                        {{ entry.displayName }}
+                      </a>
+                    }
+                  </div>
+                }
+              </td>
             }
           </tr>
-        </thead>
-        <tbody>
-          @for (row of gridRows(); track $index) {
-            <tr>
-              @for (cell of row; track $index) {
-                <td
-                  [class.dashboard-calendar-outside-month]="cell.day === null"
-                  [class.dashboard-calendar-today]="isToday(cell.day)"
-                  [attr.data-testid]="isToday(cell.day) ? 'dashboard-calendar-today' : null"
-                >
-                  @if (cell.day !== null) {
-                    <div class="dashboard-calendar-day-number mb-1">
-                      {{ cell.day }}
-                      @if (isToday(cell.day)) {
-                        <span class="visually-hidden">{{ 'dashboard.calendar.today' | t }}</span>
-                      }
-                    </div>
-                    <div class="vstack gap-1">
-                      @for (entry of cell.entries; track entry.kind + ':' + entry.id) {
-                        <a
-                          class="dashboard-calendar-entry rounded px-1 py-0 text-decoration-none"
-                          [routerLink]="entryRoute(entry)"
-                        >
-                          {{ entry.displayName }}
-                        </a>
-                      }
-                    </div>
-                  }
-                </td>
-              }
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+        }
+      </tbody>
+    </table>
 
     @if (noDayEntries().length > 0) {
       <section

@@ -41,11 +41,12 @@ neutral tabs are Home, Calendar and Tools:
 
 - Home contains the independent foldable widget for upcoming dates and birthdays in the browser's
   local current and next months.
-- Calendar contains the foldable month-grid widget.
-- Tools contains the independent response-cache maintenance widget.
+- Calendar contains the always-expanded month-grid widget without a separate card header.
+- Tools contains the always-expanded response-cache maintenance widget.
 
-Collapsed section keys are stored under one neutral browser-local key. Missing, malformed or
-unknown data leaves sections expanded. Widget loading, error and retry states stay independent.
+Collapsed section keys from Home are stored under one neutral browser-local key. Missing, malformed
+or unknown data leaves those sections expanded. Widget loading, error and retry states stay
+independent.
 The month grid supports navigation, year selection, locale weekday order, multiple entries per day,
 today highlighting and stale-response rejection. Names link to their typed Knowledge details.
 

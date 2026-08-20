@@ -2,6 +2,12 @@
 
 These rules apply to every file under `frontend/src/app/features/workspace/`.
 
+## Dashboard composition
+
+- Use foldable content sections only on the Dashboard Home tab. A page with many independent
+  elements may use foldable content sections only when that page is listed as an explicit exception
+  in this file. No exceptions are currently defined.
+
 ## Knowledge People
 
 - Keep People under the CSR routes

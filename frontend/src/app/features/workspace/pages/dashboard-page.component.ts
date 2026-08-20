@@ -4,7 +4,6 @@ import {
   Component,
   DestroyRef,
   OnInit,
-  ViewChild,
   computed,
   inject,
   signal,
@@ -24,7 +23,7 @@ import { formatAnnualDate } from '../knowledge/shared/annual-date';
 import { Calendar, CalendarEntry } from '../models/calendar.model';
 import { CalendarService } from '../services/calendar.service';
 
-type DashboardSectionKey = 'upcoming-dates' | 'month-calendar' | 'tools';
+type DashboardSectionKey = 'upcoming-dates';
 
 type DashboardTabKey = 'home' | 'month-calendar' | 'tools';
 
@@ -41,11 +40,7 @@ const DASHBOARD_TABS: readonly DashboardTabDefinition[] = [
   { key: 'tools', labelKey: 'dashboard.tools.title' },
 ];
 
-const DASHBOARD_SECTIONS: readonly DashboardSectionKey[] = [
-  'upcoming-dates',
-  'month-calendar',
-  'tools',
-];
+const DASHBOARD_SECTIONS: readonly DashboardSectionKey[] = ['upcoming-dates'];
 
 @Component({
   selector: 'app-dashboard-page',
@@ -71,16 +66,9 @@ export class DashboardPageComponent implements OnInit {
   private readonly document = inject(DOCUMENT);
   private upcomingLoadGeneration = 0;
 
-  @ViewChild(MonthCalendarWidgetComponent)
-  private monthCalendarWidget: MonthCalendarWidgetComponent | undefined;
-  @ViewChild(ToolsWidgetComponent)
-  private toolsWidget: ToolsWidgetComponent | undefined;
-
   readonly upcomingCalendar = signal<Calendar | null>(null);
   readonly upcomingLoading = signal(false);
   readonly upcomingError = signal<ApiError | null>(null);
-  readonly monthCalendarSummary = signal<string | null>(null);
-  readonly toolsStatusSummary = signal<string | null>(null);
   readonly activeTab = signal<DashboardTabKey>('home');
   readonly tabs = signal<readonly DashboardTabDefinition[]>(DASHBOARD_TABS);
   readonly collapsedSectionKeys = signal<ReadonlySet<DashboardSectionKey>>(
@@ -92,22 +80,8 @@ export class DashboardPageComponent implements OnInit {
     const summary = this.upcomingCalendar()?.summary;
     return `${this.i18n.translate('dashboard.dates.type.memorableDate')}: ${summary?.memorableDateCount ?? 0} · ${this.i18n.translate('dashboard.dates.type.birthday')}: ${summary?.birthdayCount ?? 0}`;
   });
-  readonly calendarPanelSummary = computed(() => {
-    this.i18n.language();
-    return this.monthCalendarSummary() ?? this.i18n.translate('dashboard.calendar.loadingSummary');
-  });
-  readonly toolsPanelSummary = computed(() => {
-    this.i18n.language();
-    return this.toolsStatusSummary() ?? this.i18n.translate('dashboard.tools.summary');
-  });
   ngOnInit(): void {
     this.loadUpcomingDates();
-  }
-
-  loadDashboard(): void {
-    this.loadUpcomingDates();
-    this.monthCalendarWidget?.loadSelectedMonth();
-    this.toolsWidget?.loadCacheStatus();
   }
 
   loadUpcomingDates(): void {

@@ -24,6 +24,10 @@ UI route.
 - Do not perform any git action that changes repository state unless I explicitly ask for it. This includes `git add`, `git commit`, `git push`, `git stash`, branch creation, branch switching, rebasing, merging, resetting, checking out files, and similar mutating operations.
 - For non-trivial tasks, create and follow a structured implementation plan before changing code or
   configuration. Trivial docs-only edits and direct answers do not require a plan.
+- Keep `docs/TODO.md` limited to concrete tasks, ideas, and improvements. Do not use it to restate
+  architecture, quality, security, workflow, or other `AGENTS.md` rules as checklist items. A
+  completed item may be added retroactively when it was conceived and implemented before being
+  recorded, so the roadmap retains useful history.
 - Do not leave Superpowers workflow artifact files in the repository. Do not create or retain design
   specs or other Superpowers-generated documentation. A temporary implementation plan may be
   created when required for execution, but delete the plan file before the final response. Preserve

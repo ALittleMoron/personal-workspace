@@ -5,9 +5,7 @@ import {
   DestroyRef,
   OnInit,
   computed,
-  effect,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -48,7 +46,6 @@ export class ToolsWidgetComponent implements OnInit {
   readonly cacheWarming = signal(false);
   readonly cacheActionErrorKey = signal<string | null>(null);
   readonly activeWarmOperation = signal<CacheWarmOperation | null>(null);
-  readonly summaryChange = output<string>();
 
   readonly cacheInitialLoading = computed(() => this.cacheLoading() && this.cacheStatus() === null);
   readonly cacheMutationActive = computed(() => this.cacheClearing() || this.cacheWarming());
@@ -58,23 +55,11 @@ export class ToolsWidgetComponent implements OnInit {
   readonly cacheActionsDisabled = computed(
     () => this.cacheMutationActive() || this.cacheStatus()?.enabled !== true,
   );
-  readonly dashboardSummary = computed(() => {
-    this.i18n.language();
-    const summary = [this.i18n.translate('dashboard.tools.summary')];
-    const cacheStatus = this.cacheStatus();
-    if (cacheStatus !== null) {
-      summary.push(
-        this.i18n.translate(cacheStatus.enabled ? 'tools.cache.enabled' : 'tools.cache.disabled'),
-      );
-    }
-    return summary.join(' · ');
-  });
 
   private warmPollTimeoutId: number | null = null;
 
   constructor() {
     this.destroyRef.onDestroy(() => this.clearWarmPoll());
-    effect(() => this.summaryChange.emit(this.dashboardSummary()));
   }
 
   ngOnInit(): void {

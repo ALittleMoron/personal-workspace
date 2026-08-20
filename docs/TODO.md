@@ -4,33 +4,6 @@ This roadmap contains the active backlog plus transferred completed capability h
 Calendar, and the Knowledge database. Checked history records what the product already supports;
 unchecked entries remain active work unless a later product decision supersedes them.
 
-## Authentication
-
-- [x] Add environment-backed single-owner authentication without account, team, role, or session
-  persistence tables.
-- [ ] Add server-side session storage, session management, individual revocation, and expiry tools.
-- [ ] Replace the single-owner authenticator with a users table and multi-user authentication.
-- [ ] Activate the retained per-user author/access model when multi-user authentication arrives.
-- [ ] Add revocation for copied stateless session cookies and document/automate owner credential
-  rotation; password-hash rotation alone must not imply existing cookie revocation.
-
-## Operations and resilience
-
-- [ ] Establish encrypted, access-controlled coordinated backups for PostgreSQL and both required
-  MinIO data sets, including `knowledge-private`.
-- [ ] Perform and record an isolated restore exercise that reconciles private Knowledge metadata and
-  object bytes, then repeat it on a schedule.
-- [ ] Add maintainer monitoring for production health, errors, backup freshness and restore status.
-
-## Quality and performance
-
-- [ ] Review query-plan baselines after intentional schema or query changes and keep them focused on
-  retained Knowledge and Resume storage paths.
-- [ ] Keep CSR Lighthouse budgets and accessibility/performance/best-practice gates meaningful as
-  private login/workspace flows and bundles evolve.
-- [ ] Define production slow-query monitoring and an actionable response process after a concrete
-  service-level target is chosen.
-
 ## Resume
 
 - [x] Resume
@@ -52,9 +25,6 @@ unchecked entries remain active work unless a later product decision supersedes 
     - [x] Step-by-step maximize resume export ATS score.
     - [x] Fix readability of exported resume
 
-- [ ] Improve resume and Knowledge editing ergonomics based on real single-owner use, while
-  preserving sanitized Markdown rendering and protected file delivery.
-
 ## Calendar
 
 - [x] Base calendar view in dashboard.
@@ -72,9 +42,6 @@ Each knowledge item has its own subfolder in the Knowledge section of the worksp
     - [ ] Recently changed files
     - [ ] Statistics
       - [ ] Files per category count - badge next to folder name with amount of files.
-  - [ ] Access
-    - [x] V1: configured-owner access only; Knowledge data remains author-scoped for future
-      multi-user access.
 - [ ] Knowledge item
   - [ ] Books
     - [ ] All books page
@@ -97,8 +64,6 @@ Each knowledge item has its own subfolder in the Knowledge section of the worksp
 - [ ] Add reminders for knowledge dates and birthdays.
 - [ ] Add extended knowledge database search across item types and fields.
 - [ ] Automate and test backup/restore for the private knowledge object bucket.
-- [ ] Add future Knowledge item types only with typed persistence extensions, use cases and explicit
-  workspace UX.
 
 ## Refactoring
 

@@ -1,17 +1,4 @@
 <div>
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-    <h2 class="h4 mb-0">{{ 'dashboard.title' | t }}</h2>
-    <button
-      type="button"
-      class="btn btn-outline-secondary btn-sm"
-      data-testid="dashboard-refresh"
-      [disabled]="upcomingLoading()"
-      (click)="loadDashboard()"
-    >
-      {{ 'shared.update' | t }}
-    </button>
-  </div>
-
   <ul
     class="nav nav-tabs flex-wrap gap-1 mb-3"
     role="tablist"
@@ -132,15 +119,7 @@
       [attr.data-testid]="'dashboard-tabpanel-month-calendar'"
       [hidden]="activeTab() !== 'month-calendar'"
     >
-      <app-dashboard-foldable-section
-        sectionKey="month-calendar"
-        [title]="'dashboard.calendar.title' | t"
-        [summary]="calendarPanelSummary()"
-        [expanded]="isSectionExpanded('month-calendar')"
-        (expandedChange)="setSectionExpanded('month-calendar', $event)"
-      >
-        <app-month-calendar-widget (summaryChange)="monthCalendarSummary.set($event)" />
-      </app-dashboard-foldable-section>
+      <app-month-calendar-widget />
     </div>
 
     <div
@@ -150,15 +129,7 @@
       [attr.data-testid]="'dashboard-tabpanel-tools'"
       [hidden]="activeTab() !== 'tools'"
     >
-      <app-dashboard-foldable-section
-        sectionKey="tools"
-        [title]="'dashboard.tools.title' | t"
-        [summary]="toolsPanelSummary()"
-        [expanded]="isSectionExpanded('tools')"
-        (expandedChange)="setSectionExpanded('tools', $event)"
-      >
-        <app-tools-widget (summaryChange)="toolsStatusSummary.set($event)" />
-      </app-dashboard-foldable-section>
+      <app-tools-widget />
     </div>
   </div>
 </div>
