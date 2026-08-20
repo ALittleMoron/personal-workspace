@@ -20,55 +20,117 @@
       </span>
     </div>
 
-    <div class="d-flex align-items-center justify-content-end gap-2 workspace-header-controls">
-      <span
-        class="workspace-current-user small text-body-secondary text-nowrap"
-        data-testid="workspace-current-user"
-        [title]="username()"
-      >
-        {{ 'auth.currentUser' | t }}: {{ username() }}
-      </span>
+    <div class="workspace-header-controls">
+      <div class="dropdown">
+        <button
+          type="button"
+          class="btn button-inactive btn-sm dropdown-toggle workspace-account-menu-toggle"
+          data-testid="workspace-account-menu-toggle"
+          [attr.aria-label]="('auth.currentUser' | t) + ': ' + username()"
+          [attr.aria-expanded]="menuOpen()"
+          popovertarget="workspace-account-menu"
+          popovertargetaction="toggle"
+          [title]="username()"
+        >
+          <span class="workspace-account-menu-username">{{ username() }}</span>
+        </button>
 
-      <button
-        type="button"
-        class="btn button-inactive btn-sm"
-        [disabled]="busy()"
-        (click)="requestLogout()"
-      >
-        @if (busy()) {
-          {{ 'auth.logout.submitting' | t }}
-        } @else {
-          {{ 'auth.logout' | t }}
-        }
-      </button>
-
-      <button
-        type="button"
-        class="btn button-inactive btn-sm"
-        (click)="toggleTheme()"
-        [attr.aria-label]="'shell.theme.toggle' | t"
-      >
-        {{ toggleLabel() }}
-      </button>
-
-      <div
-        class="btn-group btn-group-sm"
-        role="group"
-        [attr.aria-label]="'shell.language.label' | t"
-      >
-        @for (language of languageOptions(); track language.code) {
+        <div
+          #accountMenu
+          id="workspace-account-menu"
+          popover="auto"
+          class="dropdown-menu dropdown-menu-end"
+          data-testid="workspace-account-menu"
+          (toggle)="onMenuToggle($event)"
+        >
           <button
             type="button"
-            class="btn"
-            [class.button-active]="language.selected"
-            [class.button-inactive]="!language.selected"
-            [attr.aria-pressed]="language.selected"
-            [attr.title]="language.label"
-            (click)="switchLanguage(language.code)"
+            class="dropdown-item d-flex align-items-center justify-content-between gap-3"
+            (click)="toggleTheme()"
+            [attr.aria-label]="'shell.theme.toggle' | t"
           >
-            {{ language.shortLabel }}
+            <span>{{ 'shell.theme.toggle' | t }}</span>
+            <span class="text-body-secondary small">{{ toggleLabel() }}</span>
           </button>
-        }
+
+          <button
+            type="button"
+            class="dropdown-item d-flex align-items-center justify-content-between gap-3"
+            aria-controls="workspace-account-language-options"
+            [attr.aria-expanded]="languageMenuOpen()"
+            (click)="toggleLanguageMenu()"
+          >
+            <span>{{ 'shell.language.label' | t }}</span>
+            <svg
+              class="workspace-account-language-chevron"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </button>
+
+          @if (languageMenuOpen()) {
+            <div
+              id="workspace-account-language-options"
+              class="workspace-account-language-options"
+              data-testid="workspace-account-language-options"
+            >
+              @for (language of languageOptions(); track language.code) {
+                <button
+                  type="button"
+                  class="dropdown-item d-flex align-items-center justify-content-between gap-3"
+                  [attr.aria-pressed]="language.selected"
+                  [attr.title]="language.label"
+                  (click)="switchLanguage(language.code)"
+                >
+                  <span>{{ language.shortLabel }}</span>
+                  @if (language.selected) {
+                    <svg
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="m5 12 4 4L19 6"></path>
+                    </svg>
+                  }
+                </button>
+              }
+            </div>
+          }
+
+          <hr class="dropdown-divider" />
+
+          <button
+            type="button"
+            class="btn btn-link btn-sm link-danger text-decoration-none text-start w-100 px-3 py-2"
+            data-testid="workspace-account-logout"
+            [disabled]="busy()"
+            [attr.aria-busy]="busy()"
+            (click)="requestLogout()"
+          >
+            @if (busy()) {
+              {{ 'auth.logout.submitting' | t }}
+            } @else {
+              {{ 'auth.logout' | t }}
+            }
+          </button>
+        </div>
       </div>
     </div>
   </div>

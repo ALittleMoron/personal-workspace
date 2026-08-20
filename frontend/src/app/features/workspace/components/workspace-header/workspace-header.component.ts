@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  HostListener,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthSessionService } from '../../../../core/auth/auth-session.service';
@@ -25,6 +34,7 @@ interface LanguageOption {
   styleUrl: './workspace-header.component.scss',
 })
 export class WorkspaceHeaderComponent {
+  private readonly accountMenu = viewChild<ElementRef<HTMLElement>>('accountMenu');
   private readonly i18n = inject(I18nService);
   private readonly themeService = inject(ThemeService);
   private readonly auth = inject(AuthSessionService);
@@ -33,6 +43,8 @@ export class WorkspaceHeaderComponent {
   private readonly router = inject(Router);
 
   readonly busy = signal(false);
+  readonly languageMenuOpen = signal(false);
+  readonly menuOpen = signal(false);
   readonly username = computed(() => this.auth.state().user?.username ?? '');
   readonly toggleLabel = computed(() =>
     this.i18n.translate(
@@ -55,6 +67,28 @@ export class WorkspaceHeaderComponent {
 
   switchLanguage(language: LanguageCode): void {
     this.i18n.switchLanguage(language).subscribe();
+  }
+
+  onMenuToggle(event: ToggleEvent): void {
+    this.menuOpen.set(event.newState === 'open');
+    if (event.newState === 'closed') {
+      this.languageMenuOpen.set(false);
+    }
+  }
+
+  toggleLanguageMenu(): void {
+    this.languageMenuOpen.update((open) => !open);
+  }
+
+  @HostListener('window:resize')
+  @HostListener('window:scroll')
+  closeMenu(): void {
+    const menu = this.accountMenu()?.nativeElement;
+    if (this.menuOpen() && typeof menu?.hidePopover === 'function') {
+      menu.hidePopover();
+    }
+    this.menuOpen.set(false);
+    this.languageMenuOpen.set(false);
   }
 
   requestLogout(): void {

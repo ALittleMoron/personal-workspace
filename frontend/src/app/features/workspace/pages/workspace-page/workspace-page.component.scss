@@ -1,14 +1,8 @@
 .workspace-main {
-  --workspace-header-clearance: 8.5rem;
+  --workspace-header-clearance: 3.5rem;
   --markdown-editor-sticky-top-inset: var(--workspace-header-clearance);
 
   margin-top: var(--workspace-header-clearance);
-}
-
-@media (min-width: 576px) and (max-width: 767.98px) {
-  .workspace-main {
-    --workspace-header-clearance: 6rem;
-  }
 }
 
 .workspace-layout {
