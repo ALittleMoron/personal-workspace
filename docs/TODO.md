@@ -15,21 +15,39 @@ unchecked entries remain active work unless a later product decision supersedes 
   - [x] Add list, create with language selection, detail edit, language badge, selected-language preview, and delete UI.
   - [x] Keep resumes private: no public pages, sitemap entries, SEO, or themes in v1.
   - [x] Fix resume multilines fields: text with \\n to array.
+  - [ ] AI
+    - [ ] Advices of resume improvement
+    - [ ] Analyze vacancy requirements and match against resume
+    - [ ] Generate cover letter
+  - [ ] New blocks and fields
+    - [ ] Projects
+      - [ ] Team size
+      - [ ] Scale
+    - [ ] Photo
   - [ ] Resume customization
     - [ ] Blocks order (Title, Photo, Summary, Experience, etc.)
     - [ ] Blocks visibility
     - [ ] Themes
+  - [ ] Preview
+    - [ ] Show real DOCS/PDF preview
   - [x] Resume export
     - [x] To PDF
     - [x] To DOCX
     - [x] Step-by-step maximize resume export ATS score.
     - [x] Fix readability of exported resume
+    - [ ] Apply customization to exported resume
 
 ## Calendar
 
 - [x] Base calendar view in dashboard.
 - [ ] Add day, week, and year views alongside the dashboard calendar month view.
-- [ ] Add calendar creation flows for Person birthdays, memorable Dates, and one-time or recurring Events.
+- [ ] Clickable calendar day
+  - [ ] Click on empty area -> Open 1 day detail modal
+  - [ ] Click on event -> Open event detail modal
+- [ ] Add events from calendar
+  - [ ] Person birthdays
+  - [ ] Memorable Dates
+  - [ ] One-time or recurring Events
 
 ## Knowledge database
 
@@ -40,8 +58,6 @@ Each knowledge item has its own subfolder in the Knowledge section of the worksp
     - [ ] Important info (in-dashboard CRUD – only text oneline items)
     - [x] Dates and birthdays (current and next month)
     - [ ] Recently changed files
-    - [ ] Statistics
-      - [ ] Files per category count - badge next to folder name with amount of files.
 - [ ] Knowledge item
   - [ ] Books
     - [ ] All books page
@@ -60,7 +76,6 @@ Each knowledge item has its own subfolder in the Knowledge section of the worksp
   - [ ] Techniques
   - [ ] Technologies
 - [ ] Export Obsidian vault to knowledge database
-- [ ] Add general knowledge database import/export workflows beyond the planned Obsidian vault transfer.
 - [ ] Add reminders for knowledge dates and birthdays.
 - [ ] Add extended knowledge database search across item types and fields.
 - [ ] Automate and test backup/restore for the private knowledge object bucket.
@@ -71,3 +86,7 @@ Each knowledge item has its own subfolder in the Knowledge section of the worksp
 - [x] Serve the protected workspace dashboard directly at `/` and protected product APIs at
   `/api/<domain>`.
 - [x] Remove the inherited how-this-site-is-built, updates, sitemap, robots, SEO, and SSR artifacts.
+
+## Errors
+
+...
